@@ -3,6 +3,24 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Marka rengi: sıcak bordo/kırmızı (logo ile uyumlu) */
+  --color-brand-50: #fdf3f4;
+  --color-brand-100: #fbe4e7;
+  --color-brand-200: #f7ccd2;
+  --color-brand-300: #f0a4b0;
+  --color-brand-400: #e57286;
+  --color-brand-500: #d24a63;
+  --color-brand-600: #b52847;
+  --color-brand-700: #971e3c;
+  --color-brand-800: #7d1c35;
+  --color-brand-900: #6b1a31;
+  --color-brand-950: #3c0a17;
+
+  /* Vurgu: sıcak altın (premium hissi için) */
+  --color-gold-400: #e0b15c;
+  --color-gold-500: #cc9843;
+  --color-gold-600: #ad7c32;
 }
 
 @theme inline {
@@ -10,17 +28,40 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
+  --font-display: var(--font-display);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-brand-50: var(--color-brand-50);
+  --color-brand-100: var(--color-brand-100);
+  --color-brand-200: var(--color-brand-200);
+  --color-brand-300: var(--color-brand-300);
+  --color-brand-400: var(--color-brand-400);
+  --color-brand-500: var(--color-brand-500);
+  --color-brand-600: var(--color-brand-600);
+  --color-brand-700: var(--color-brand-700);
+  --color-brand-800: var(--color-brand-800);
+  --color-brand-900: var(--color-brand-900);
+  --color-brand-950: var(--color-brand-950);
+
+  --color-gold-400: var(--color-gold-400);
+  --color-gold-500: var(--color-gold-500);
+  --color-gold-600: var(--color-gold-600);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background-color: var(--color-brand-200);
+  color: var(--color-brand-900);
+}
+
+.font-display {
+  font-family: var(--font-display), serif;
+}
+
+/* Landing sayfası için ince doku deseni */
+.bg-grid-pattern {
+  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+  background-size: 22px 22px;
 }
