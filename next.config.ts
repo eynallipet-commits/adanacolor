@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
     remotePatterns: supabaseHostname
       ? [{ protocol: "https", hostname: supabaseHostname, pathname: "/storage/v1/object/public/**" }]
       : [],
+    // Next.js 16'da varsayılan yalnızca [75]. Katalog kapak görselleri müşteriye
+    // ürün seçtirdiği için daha yüksek kalitede sunuluyor.
+    qualities: [75, 90, 95],
   },
 };
 

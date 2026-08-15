@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useActionState } from "react";
 import Image from "next/image";
-import { CreditCard, Landmark, Check, ImageOff, ShoppingCart, Images, Lock, RotateCcw } from "lucide-react";
+import { CreditCard, Landmark, Check, ImageOff, ShoppingCart, Images, Lock, RotateCcw, Maximize2, X } from "lucide-react";
 import { createOrderAction, type CreateOrderState } from "./actions";
 import { calcAlbumUnitPrice, calcOrderTotals } from "@/lib/pricing";
 import { formatTL, cn } from "@/lib/utils";
@@ -190,6 +190,7 @@ export function OrderBuilder({
   const [pageCount, setPageCount] = useState(selectedPackage?.base_page_count ?? 0);
   const [albumModelId, setAlbumModelId] = useState<string>(defaultModelId);
   const [albumColorId, setAlbumColorId] = useState<string>("");
+  const [previewModel, setPreviewModel] = useState<AlbumModel | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [coverNamesText, setCoverNamesText] = useState("");
   const [coverDateText, setCoverDateText] = useState("");
@@ -407,51 +408,67 @@ export function OrderBuilder({
               </div>
               <div className="col-span-2">
                 <Label>Kapak Modeli</Label>
-                <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {models.map((m) => {
                     const selected = albumModelId === m.id;
                     return (
-                      <button
+                      <div
                         key={m.id}
-                        type="button"
-                        onClick={() => handleModelChange(selected ? "" : m.id)}
                         className={cn(
-                          "group relative overflow-hidden rounded-lg border-2 text-left transition-colors",
-                          selected ? "border-brand-600" : "border-transparent"
+                          "group relative overflow-hidden rounded-xl border-2 bg-white transition-colors",
+                          selected ? "border-brand-600 shadow-sm" : "border-neutral-200 hover:border-neutral-300"
                         )}
                       >
-                        <div className="relative aspect-[4/3] w-full bg-neutral-100">
-                          {m.image_url ? (
-                            <Image
-                              src={m.image_url}
-                              alt={m.name}
-                              fill
-                              sizes="120px"
-                              className="object-cover transition-transform group-hover:scale-105"
-                            />
-                          ) : (
-                            <div className="flex h-full items-center justify-center text-neutral-300">
-                              <ImageOff className="h-5 w-5" />
-                            </div>
-                          )}
-                          {selected && (
-                            <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white">
-                              <Check className="h-3 w-3" />
-                            </span>
-                          )}
-                        </div>
-                        <div
-                          className={cn(
-                            "px-1.5 py-1 text-center",
-                            selected ? "bg-brand-50 text-brand-700" : "bg-white text-neutral-600"
-                          )}
+                        <button
+                          type="button"
+                          onClick={() => handleModelChange(selected ? "" : m.id)}
+                          className="block w-full text-left"
                         >
-                          <p className="truncate text-xs font-medium">{m.name}</p>
-                          <p className="truncate text-[10px] text-neutral-400" title={modelSizeCodes(m.id)}>
-                            {modelSizeCodes(m.id)}
-                          </p>
-                        </div>
-                      </button>
+                          <div className="relative aspect-[3/2] w-full bg-neutral-50">
+                            {m.image_url ? (
+                              <Image
+                                src={m.image_url}
+                                alt={`${m.name} albüm kapak modeli`}
+                                fill
+                                sizes="(min-width: 1024px) 320px, (min-width: 640px) 33vw, 50vw"
+                                quality={90}
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full items-center justify-center text-neutral-300">
+                                <ImageOff className="h-6 w-6" />
+                              </div>
+                            )}
+                            {selected && (
+                              <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-white shadow">
+                                <Check className="h-3.5 w-3.5" />
+                              </span>
+                            )}
+                          </div>
+                          <div
+                            className={cn(
+                              "px-2 py-1.5",
+                              selected ? "bg-brand-50 text-brand-700" : "bg-white text-neutral-700"
+                            )}
+                          >
+                            <p className="truncate text-sm font-medium">{m.name}</p>
+                            <p className="truncate text-[11px] text-neutral-400" title={modelSizeCodes(m.id)}>
+                              {modelSizeCodes(m.id)}
+                            </p>
+                          </div>
+                        </button>
+                        {m.image_url && (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewModel(m)}
+                            title="Büyüt"
+                            aria-label={`${m.name} modelini büyüt`}
+                            className="absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/45 text-white transition-opacity hover:bg-black/70 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                          >
+                            <Maximize2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
@@ -816,6 +833,60 @@ export function OrderBuilder({
         </Card>
       </div>
       </div>
+
+      {/* Kapak modeli büyük önizleme */}
+      {previewModel?.image_url && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${previewModel.name} önizleme`}
+          onClick={() => setPreviewModel(null)}
+        >
+          <div
+            className="relative w-full max-w-4xl overflow-hidden rounded-xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative aspect-[3/2] w-full bg-neutral-50">
+              <Image
+                src={previewModel.image_url}
+                alt={`${previewModel.name} albüm kapak modeli`}
+                fill
+                sizes="(min-width: 1024px) 896px, 100vw"
+                quality={95}
+                className="object-contain"
+                priority
+              />
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 px-4 py-3">
+              <div className="min-w-0">
+                <p className="font-display text-lg font-bold text-neutral-900">{previewModel.name}</p>
+                <p className="truncate text-xs text-neutral-500">
+                  Basılabilen ebatlar: {modelSizeCodes(previewModel.id)}
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  handleModelChange(previewModel.id);
+                  setPreviewModel(null);
+                }}
+              >
+                Bu Modeli Seç
+              </Button>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPreviewModel(null)}
+              aria-label="Kapat"
+              className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+            >
+              <X className="h-4.5 w-4.5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
