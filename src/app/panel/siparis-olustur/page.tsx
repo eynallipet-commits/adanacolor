@@ -73,6 +73,8 @@ export default async function SiparisOlusturPage({
     }
   }
 
+  const balanceBlocked = !!company?.balance_block_enabled && (company?.balance ?? 0) > 0;
+
   return (
     <div className="space-y-6">
       <div>
@@ -81,6 +83,13 @@ export default async function SiparisOlusturPage({
           {company?.name} · İskonto oranınız: <span className="font-medium">%{company?.discount_rate}</span>
         </p>
       </div>
+      {balanceBlocked && (
+        <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Açık hesap bakiyeniz{" "}
+          <span className="font-semibold">{company!.balance.toFixed(2)} TL</span>. Yeni sipariş
+          verebilmek için önce bu bakiyeyi kapatmanız gerekiyor, lütfen atölyemizle iletişime geçin.
+        </p>
+      )}
       <OrderBuilder
         sizes={sizesRes.data ?? []}
         packages={packagesRes.data ?? []}

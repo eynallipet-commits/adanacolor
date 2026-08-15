@@ -1,8 +1,14 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AuthSplit } from "@/components/layout/auth-split";
 import { Logo } from "@/components/layout/logo";
 import { ApplyForm } from "./apply-form";
+
+export const metadata: Metadata = {
+  title: "Üyelik Başvurusu",
+  description: "Fotoğrafçılar için atölye ortaklığı başvurusu — hesabınızı oluşturun, ekibimiz kısa sürede değerlendirsin.",
+};
 
 export default function BasvuruPage() {
   return (
@@ -16,7 +22,7 @@ export default function BasvuruPage() {
         <div>
           <h1 className="font-display text-2xl font-bold text-neutral-900">Üyelik Başvurusu</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            Fotoğraf firmanız için B2B hesabı talep edin, ekibimiz kısa sürede değerlendirsin.
+            Atölyemizle çalışmaya başlamak için hesabınızı oluşturun, ekibimiz kısa sürede değerlendirsin.
           </p>
         </div>
         <Card>

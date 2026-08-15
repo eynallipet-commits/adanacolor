@@ -5,16 +5,8 @@ import { requireAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-function generateTempPassword() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-  let out = "";
-  for (let i = 0; i < 10; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
-}
-
 export interface ApproveResult {
   error?: string;
-  tempPassword?: string;
   email?: string;
 }
 
@@ -31,6 +23,9 @@ export async function approveApplicationAction(applicationId: string, discountRa
 
   if (!application || application.status !== "pending") {
     return { error: "Başvuru bulunamadı veya zaten işlenmiş." };
+  }
+  if (!application.user_id) {
+    return { error: "Bu başvurunun bağlı bir kullanıcı hesabı yok, onaylanamıyor." };
   }
 
   const { data: company, error: companyError } = await adminClient
@@ -50,28 +45,14 @@ export async function approveApplicationAction(applicationId: string, discountRa
     return { error: "Cari oluşturulamadı: " + (companyError?.message ?? "") };
   }
 
-  const tempPassword = generateTempPassword();
-  const { data: userRes, error: userError } = await adminClient.auth.admin.createUser({
-    email: application.email,
-    password: tempPassword,
-    email_confirm: true,
-  });
-
-  if (userError || !userRes.user) {
-    return { error: "Kullanıcı oluşturulamadı: " + (userError?.message ?? "") };
-  }
-
-  const { error: profileError } = await adminClient.from("profiles").insert({
-    id: userRes.user.id,
-    role: "photographer",
-    full_name: application.contact_name,
-    phone: application.phone,
-    company_id: company.id,
-    status: "active",
-  });
+  // Kullanıcı hesabı ve şifresi zaten başvuru anında oluşturulmuştu; burada sadece cariye bağlayıp aktifleştiriyoruz.
+  const { error: profileError } = await adminClient
+    .from("profiles")
+    .update({ company_id: company.id, status: "active" })
+    .eq("id", application.user_id);
 
   if (profileError) {
-    return { error: "Profil oluşturulamadı: " + profileError.message };
+    return { error: "Profil güncellenemedi: " + profileError.message };
   }
 
   await adminClient
@@ -87,17 +68,30 @@ export async function approveApplicationAction(applicationId: string, discountRa
   revalidatePath("/admin/basvurular");
   revalidatePath("/admin/cariler");
 
-  return { tempPassword, email: application.email };
+  return { email: application.email };
 }
 
 export async function rejectApplicationAction(applicationId: string) {
   const { profile: admin } = await requireAdmin();
   const supabase = await createClient();
+  const adminClient = createAdminClient();
+
+  const { data: application } = await supabase
+    .from("membership_applications")
+    .select("user_id")
+    .eq("id", applicationId)
+    .single();
 
   await supabase
     .from("membership_applications")
     .update({ status: "rejected", reviewed_by: admin.id, reviewed_at: new Date().toISOString() })
     .eq("id", applicationId);
+
+  // Reddedilen başvurunun hesabını kaldırıyoruz ki aynı e-posta ile tekrar başvurabilsin.
+  if (application?.user_id) {
+    await adminClient.auth.admin.deleteUser(application.user_id);
+    await adminClient.from("profiles").delete().eq("id", application.user_id);
+  }
 
   revalidatePath("/admin/basvurular");
 }

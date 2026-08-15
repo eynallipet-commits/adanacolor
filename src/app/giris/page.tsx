@@ -1,9 +1,15 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Logo } from "@/components/layout/logo";
 import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AuthSplit } from "@/components/layout/auth-split";
 import { LoginForm } from "./login-form";
+
+export const metadata: Metadata = {
+  title: "Giriş Yap",
+  robots: { index: false, follow: false },
+};
 
 export default function GirisPage() {
   return (
@@ -16,7 +22,7 @@ export default function GirisPage() {
         </div>
         <div>
           <h1 className="font-display text-2xl font-bold text-neutral-900">Giriş Yap</h1>
-          <p className="mt-1 text-sm text-neutral-500">B2B fotoğrafçı paneline hoş geldiniz.</p>
+          <p className="mt-1 text-sm text-neutral-500">Panelinize hoş geldiniz.</p>
         </div>
         <Card>
           <CardHeader>

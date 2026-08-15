@@ -1,8 +1,9 @@
-import { Building2, PercentCircle } from "lucide-react";
+import { Building2, KeyRound, PercentCircle } from "lucide-react";
 import { requirePhotographer } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { ChangePasswordForm } from "./change-password-form";
 
 export default async function HesabimPage() {
   const { profile, company, authUser } = await requirePhotographer();
@@ -13,6 +14,7 @@ export default async function HesabimPage() {
     ["Telefon", company?.phone ?? "—"],
     ["Yetkili", profile.full_name ?? "—"],
     ["E-posta", authUser.email ?? "—"],
+    ["Açık Hesap Bakiyesi", `${(company?.balance ?? 0).toFixed(2)} TL`],
   ];
 
   return (
@@ -51,8 +53,20 @@ export default async function HesabimPage() {
           </dl>
         </CardContent>
       </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <KeyRound className="h-4 w-4 text-brand-600" />
+            Şifre Değiştir
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ChangePasswordForm />
+        </CardContent>
+      </Card>
+
       <p className="text-sm text-neutral-500">
-        Bilgilerinizde bir değişiklik yapmak isterseniz atölyemizle iletişime geçin.
+        Firma bilgilerinizde bir değişiklik yapmak isterseniz atölyemizle iletişime geçin.
       </p>
     </div>
   );

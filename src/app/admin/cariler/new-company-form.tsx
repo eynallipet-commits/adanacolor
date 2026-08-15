@@ -42,6 +42,10 @@ export function NewCompanyForm() {
               <Input id="tax_no" name="tax_no" />
             </div>
             <div>
+              <Label htmlFor="tax_office">Vergi Dairesi</Label>
+              <Input id="tax_office" name="tax_office" />
+            </div>
+            <div>
               <Label htmlFor="phone">Telefon</Label>
               <Input id="phone" name="phone" />
             </div>
@@ -53,7 +57,15 @@ export function NewCompanyForm() {
               <Label htmlFor="address">Adres</Label>
               <Input id="address" name="address" />
             </div>
+            <div>
+              <Label htmlFor="opening_balance">Açılış Bakiyesi (TL, varsa)</Label>
+              <Input id="opening_balance" name="opening_balance" type="number" step="0.01" defaultValue={0} />
+            </div>
           </div>
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
+            <input type="checkbox" name="balance_block_enabled" />
+            Bakiye sıfır olmadan yeni sipariş verilemesin
+          </label>
           {state.error && <p className="text-sm text-red-600">{state.error}</p>}
           <div className="flex gap-2">
             <Button type="submit" disabled={isPending}>

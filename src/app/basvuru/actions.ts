@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface ApplyState {
   error?: string;
@@ -29,6 +30,8 @@ export async function applyAction(_prevState: ApplyState, formData: FormData): P
   const kvkkConsent = formData.get("kvkk_consent") === "on";
   const applicationId = String(formData.get("application_id") || "").trim();
   const taxCertificatePath = String(formData.get("tax_certificate_path") || "").trim();
+  const password = String(formData.get("password") || "");
+  const confirmPassword = String(formData.get("confirm_password") || "");
 
   if (!company_name || !contact_name || !email || !phone) {
     return { error: "Firma adı, yetkili adı, e-posta ve telefon zorunludur." };
@@ -38,6 +41,12 @@ export async function applyAction(_prevState: ApplyState, formData: FormData): P
   }
   if (!applicationId || !taxCertificatePath) {
     return { error: "Devam etmek için vergi levhanızı yüklemeniz gerekiyor." };
+  }
+  if (password.length < 6) {
+    return { error: "Şifre en az 6 karakter olmalı." };
+  }
+  if (password !== confirmPassword) {
+    return { error: "Şifreler eşleşmiyor." };
   }
 
   const supabase = await createClient();
@@ -53,7 +62,38 @@ export async function applyAction(_prevState: ApplyState, formData: FormData): P
     return { error: "Bu e-posta ile son 24 saat içinde zaten bir başvuru aldık. Ekibimiz inceliyor." };
   }
 
-  const { error } = await supabase.from("membership_applications").insert({
+  const adminClient = createAdminClient();
+
+  // Kullanıcı şifresini başvuru anında belirliyor; hesap admin onayına kadar "pending" kalır,
+  // onaylandığında bu şifreyle doğrudan giriş yapabilsin diye auth kullanıcısı şimdiden oluşturulur.
+  const { data: userRes, error: userError } = await adminClient.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
+
+  if (userError || !userRes.user) {
+    const message = userError?.message?.includes("already been registered")
+      ? "Bu e-posta ile zaten bir hesap var. Giriş yapmayı deneyin veya farklı bir e-posta kullanın."
+      : "Hesap oluşturulamadı, lütfen tekrar deneyin.";
+    return { error: message };
+  }
+
+  const { error: profileError } = await adminClient.from("profiles").insert({
+    id: userRes.user.id,
+    role: "photographer",
+    full_name: contact_name,
+    phone,
+    company_id: null,
+    status: "pending",
+  });
+
+  if (profileError) {
+    await adminClient.auth.admin.deleteUser(userRes.user.id);
+    return { error: "Hesap oluşturulamadı, lütfen tekrar deneyin." };
+  }
+
+  const { error } = await adminClient.from("membership_applications").insert({
     id: applicationId,
     company_name,
     contact_name,
@@ -65,9 +105,11 @@ export async function applyAction(_prevState: ApplyState, formData: FormData): P
     kvkk_consent: true,
     kvkk_consent_at: new Date().toISOString(),
     tax_certificate_path: taxCertificatePath,
+    user_id: userRes.user.id,
   });
 
   if (error) {
+    await adminClient.auth.admin.deleteUser(userRes.user.id);
     return { error: "Başvurunuz gönderilemedi, lütfen tekrar deneyin." };
   }
 

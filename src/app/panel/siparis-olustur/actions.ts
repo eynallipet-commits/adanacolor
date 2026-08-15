@@ -49,6 +49,12 @@ export async function createOrderAction(
   const paymentMethod = String(formData.get("payment_method") || "");
   const cartRaw = String(formData.get("cart") || "[]");
 
+  if (company?.balance_block_enabled && company.balance > 0) {
+    return {
+      error: `Açık hesap bakiyeniz ${company.balance.toFixed(2)} TL. Yeni sipariş verebilmek için önce bu bakiyeyi kapatmanız gerekiyor. Lütfen atölyemizle iletişime geçin.`,
+    };
+  }
+
   if (paymentMethod !== "credit_card" && paymentMethod !== "bank_transfer") {
     return { error: "Geçerli bir ödeme yöntemi seçin." };
   }

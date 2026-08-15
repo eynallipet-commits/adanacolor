@@ -31,6 +31,9 @@ export async function loginAction(_prevState: LoginState, formData: FormData): P
 
   if (!profile || profile.status !== "active") {
     await supabase.auth.signOut();
+    if (profile?.status === "pending") {
+      return { error: "Başvurunuz henüz onaylanmadı. Onaylandığında bu şifreyle giriş yapabileceksiniz." };
+    }
     return { error: "Hesabınız aktif değil. Lütfen yönetici ile iletişime geçin." };
   }
 

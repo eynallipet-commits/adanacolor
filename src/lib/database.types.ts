@@ -24,6 +24,18 @@ export interface Company {
   email: string | null;
   discount_rate: number;
   status: "active" | "suspended";
+  balance: number;
+  balance_block_enabled: boolean;
+  tax_office: string | null;
+  created_at: string;
+}
+
+export interface CompanyBalanceTransaction {
+  id: string;
+  company_id: string;
+  amount: number;
+  note: string | null;
+  created_by: string | null;
   created_at: string;
 }
 
@@ -53,6 +65,7 @@ export interface MembershipApplication {
   tax_certificate_path: string | null;
   kvkk_consent: boolean;
   kvkk_consent_at: string | null;
+  user_id: string | null;
   created_at: string;
 }
 
@@ -147,6 +160,7 @@ export interface Order {
   shipped_at: string | null;
   delivered_at: string | null;
   notes: string | null;
+  invoice_no: string | null;
   created_at: string;
   updated_at: string;
 }

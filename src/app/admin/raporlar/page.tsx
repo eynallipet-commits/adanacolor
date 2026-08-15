@@ -1,14 +1,17 @@
 import Link from "next/link";
-import { TrendingUp, Trophy, PieChart } from "lucide-react";
+import { TrendingUp, Trophy, PieChart, Search, Wallet } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/lib/order-status";
 import type { Company, Order, OrderStatus } from "@/lib/database.types";
 import { formatTL } from "@/lib/utils";
 
 const REVENUE_STATUSES: OrderStatus[] = ["paid", "in_production", "shipped", "delivered"];
+const MAX_MONTHS = 24;
 
 function monthKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -19,24 +22,40 @@ function monthLabel(key: string) {
   return new Intl.DateTimeFormat("tr-TR", { month: "long", year: "numeric" }).format(new Date(y, m - 1, 1));
 }
 
-export default async function RaporlarPage() {
+export default async function RaporlarPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
   await requireAdmin();
+  const { from, to } = await searchParams;
   const supabase = await createClient();
 
+  const now = new Date();
+  const rangeEnd = to ? new Date(`${to}T23:59:59`) : now;
+  const rangeStart = from ? new Date(`${from}T00:00:00`) : new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+  let ordersQuery = supabase.from("orders").select("*");
+  if (from) ordersQuery = ordersQuery.gte("created_at", `${from}T00:00:00`);
+  if (to) ordersQuery = ordersQuery.lte("created_at", `${to}T23:59:59`);
+
   const [{ data: orders }, { data: companies }] = await Promise.all([
-    supabase.from("orders").select("*").returns<Order[]>(),
+    ordersQuery.returns<Order[]>(),
     supabase.from("companies").select("*").returns<Company[]>(),
   ]);
 
   const all = orders ?? [];
-  const companyMap = new Map((companies ?? []).map((c) => [c.id, c.name]));
+  const allCompanies = companies ?? [];
+  const companyMap = new Map(allCompanies.map((c) => [c.id, c.name]));
   const revenueOrders = all.filter((o) => REVENUE_STATUSES.includes(o.status));
 
-  // Son 6 ay ciro
+  // Seçilen aralığa göre aylık ciro dağılımı
   const months: string[] = [];
-  const now = new Date();
-  for (let i = 5; i >= 0; i--) {
-    months.push(monthKey(new Date(now.getFullYear(), now.getMonth() - i, 1)));
+  let cursor = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
+  const endCursor = new Date(rangeEnd.getFullYear(), rangeEnd.getMonth(), 1);
+  while (cursor <= endCursor && months.length < MAX_MONTHS) {
+    months.push(monthKey(cursor));
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
   }
   const revenueByMonth = new Map(months.map((m) => [m, 0]));
   for (const o of revenueOrders) {
@@ -66,24 +85,54 @@ export default async function RaporlarPage() {
   const totalOrders = all.length || 1;
 
   const totalRevenue = revenueOrders.reduce((s, o) => s + o.total, 0);
-  const thisMonthRevenue = revenueByMonth.get(months[months.length - 1]) ?? 0;
+  const thisMonthKey = monthKey(now);
+  const thisMonthRevenue = revenueByMonth.get(thisMonthKey) ?? 0;
   const avgOrderValue = revenueOrders.length > 0 ? totalRevenue / revenueOrders.length : 0;
+
+  // Açık hesap — güncel durum, tarih filtresinden bağımsız
+  const debtors = allCompanies.filter((c) => c.balance > 0).sort((a, b) => b.balance - a.balance);
+  const totalDebt = debtors.reduce((s, c) => s + c.balance, 0);
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Raporlar</h1>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <form className="flex flex-wrap items-end gap-3" action="/admin/raporlar" method="get">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-neutral-800" htmlFor="from">
+            Başlangıç
+          </label>
+          <Input id="from" name="from" type="date" defaultValue={from ?? ""} />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-neutral-800" htmlFor="to">
+            Bitiş
+          </label>
+          <Input id="to" name="to" type="date" defaultValue={to ?? ""} />
+        </div>
+        <Button type="submit" size="default" className="gap-1.5">
+          <Search className="h-4 w-4" />
+          Filtrele
+        </Button>
+        {(from || to) && (
+          <Link href="/admin/raporlar" className="text-sm text-neutral-500 hover:underline">
+            Temizle (son 6 ay)
+          </Link>
+        )}
+      </form>
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard icon={<TrendingUp className="h-5 w-5" />} tone="brand" label="Toplam Ciro" value={formatTL(totalRevenue)} />
         <StatCard icon={<TrendingUp className="h-5 w-5" />} tone="emerald" label="Bu Ay" value={formatTL(thisMonthRevenue)} />
         <StatCard icon={<TrendingUp className="h-5 w-5" />} tone="indigo" label="Ort. Sipariş Değeri" value={formatTL(avgOrderValue)} />
+        <StatCard icon={<Wallet className="h-5 w-5" />} tone="amber" label="Toplam Açık Hesap" value={formatTL(totalDebt)} />
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-brand-600" />
-            Son 6 Ay Ciro
+            Aylık Ciro
           </CardTitle>
           <CardDescription>Ödemesi alınmış (Ödendi ve sonrası) siparişler baz alınmıştır.</CardDescription>
         </CardHeader>
@@ -114,7 +163,7 @@ export default async function RaporlarPage() {
           </CardHeader>
           <CardContent>
             {topCompanies.length === 0 ? (
-              <p className="text-sm text-neutral-500">Henüz ödemesi alınmış sipariş yok.</p>
+              <p className="text-sm text-neutral-500">Bu aralıkta ödemesi alınmış sipariş yok.</p>
             ) : (
               <ol className="space-y-3">
                 {topCompanies.map((c, i) => (
@@ -160,6 +209,32 @@ export default async function RaporlarPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wallet className="h-4 w-4 text-brand-600" />
+            Açık Hesabı Olan Cariler
+          </CardTitle>
+          <CardDescription>Güncel bakiye durumu — tarih filtresinden bağımsızdır.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {debtors.length === 0 ? (
+            <p className="text-sm text-neutral-500">Açık hesabı olan cari yok.</p>
+          ) : (
+            <ul className="divide-y divide-neutral-100">
+              {debtors.map((c) => (
+                <li key={c.id} className="flex items-center justify-between py-2.5 text-sm">
+                  <Link href={`/admin/cariler/${c.id}`} className="font-medium hover:underline">
+                    {c.name}
+                  </Link>
+                  <span className="font-medium text-red-600">{formatTL(c.balance)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,5 +1,8 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { requirePhotographer } from "@/lib/auth";
+
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 import { PanelNav } from "@/components/layout/panel-nav";
 import { LogoutButton } from "@/components/layout/logout-button";
 import { NotificationBell } from "@/components/layout/notification-bell";

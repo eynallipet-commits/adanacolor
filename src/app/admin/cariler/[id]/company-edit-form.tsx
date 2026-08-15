@@ -41,6 +41,10 @@ export function CompanyEditForm({ company }: { company: Company }) {
           <Input id="tax_no" name="tax_no" defaultValue={company.tax_no ?? ""} />
         </div>
         <div>
+          <Label htmlFor="tax_office">Vergi Dairesi</Label>
+          <Input id="tax_office" name="tax_office" defaultValue={company.tax_office ?? ""} />
+        </div>
+        <div>
           <Label htmlFor="phone">Telefon</Label>
           <Input id="phone" name="phone" defaultValue={company.phone ?? ""} />
         </div>

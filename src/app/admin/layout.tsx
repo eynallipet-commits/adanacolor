@@ -1,5 +1,8 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth";
+
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 import { LogoutButton } from "@/components/layout/logout-button";
 import { AdminNav } from "@/components/layout/admin-nav";
 import { NotificationBell } from "@/components/layout/notification-bell";

@@ -24,13 +24,17 @@ export function ApplyForm() {
   const [taxCert, setTaxCert] = useState<{ path: string; name: string; size: number } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const passwordsValid = password.length >= 6 && password === confirmPassword;
 
   if (state.success) {
     return (
       <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-6 text-center">
         <p className="font-medium text-emerald-800">Başvurunuz alındı.</p>
         <p className="mt-1 text-sm text-emerald-700">
-          Ekibimiz başvurunuzu inceledikten sonra size e-posta/telefon ile dönüş yapacaktır.
+          Ekibimiz başvurunuzu inceledikten sonra size e-posta/telefon ile dönüş yapacaktır. Onaylandığında
+          az önce belirlediğiniz e-posta ve şifreyle doğrudan giriş yapabilirsiniz.
         </p>
       </div>
     );
@@ -65,7 +69,7 @@ export function ApplyForm() {
     setTaxCert({ path, name: file.name, size: file.size });
   }
 
-  const canSubmit = !!taxCert && !uploading;
+  const canSubmit = !!taxCert && !uploading && passwordsValid;
 
   return (
     <form action={formAction} className="space-y-4">
@@ -103,7 +107,39 @@ export function ApplyForm() {
           <Label htmlFor="address">Adres</Label>
           <Input id="address" name="address" />
         </div>
+        <div>
+          <Label htmlFor="password">Şifre *</Label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            required
+            minLength={6}
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="confirm_password">Şifre (Tekrar) *</Label>
+          <Input
+            id="confirm_password"
+            name="confirm_password"
+            type="password"
+            required
+            minLength={6}
+            placeholder="••••••••"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+        </div>
       </div>
+      {password && password.length < 6 && (
+        <p className="text-xs text-amber-600">Şifre en az 6 karakter olmalı.</p>
+      )}
+      {confirmPassword && password !== confirmPassword && (
+        <p className="text-xs text-amber-600">Şifreler eşleşmiyor.</p>
+      )}
       <div>
         <Label htmlFor="message">Mesaj</Label>
         <Textarea id="message" name="message" placeholder="Eklemek istediğiniz bilgiler..." />

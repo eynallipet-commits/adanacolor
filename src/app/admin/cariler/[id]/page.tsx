@@ -1,25 +1,33 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Building2, Users, Images, ShoppingBag, ClipboardList, PercentCircle } from "lucide-react";
+import { Building2, Users, Images, ShoppingBag, ClipboardList, PercentCircle, Wallet } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
-import type { AlbumModel, Company, ExtraProduct, Order, Profile } from "@/lib/database.types";
+import type {
+  AlbumModel,
+  Company,
+  CompanyBalanceTransaction,
+  ExtraProduct,
+  Order,
+  Profile,
+} from "@/lib/database.types";
 import { ORDER_STATUS_COLORS, ORDER_STATUS_LABELS } from "@/lib/order-status";
 import { formatTL } from "@/lib/utils";
 import { CompanyEditForm } from "./company-edit-form";
 import { InviteUserForm } from "./invite-user-form";
 import { CustomAlbumModels, CustomExtraProducts } from "./custom-products";
+import { BalanceManager } from "./balance-manager";
 
 export default async function CariDetayPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   await requireAdmin();
   const supabase = await createClient();
 
-  const [companyRes, profilesRes, modelsRes, extrasRes, ordersRes] = await Promise.all([
+  const [companyRes, profilesRes, modelsRes, extrasRes, ordersRes, balanceTxRes] = await Promise.all([
     supabase.from("companies").select("*").eq("id", id).single<Company>(),
     supabase.from("profiles").select("*").eq("company_id", id).returns<Profile[]>(),
     supabase.from("album_models").select("*").eq("company_id", id).returns<AlbumModel[]>(),
@@ -30,6 +38,12 @@ export default async function CariDetayPage({ params }: { params: Promise<{ id: 
       .eq("company_id", id)
       .order("created_at", { ascending: false })
       .returns<Order[]>(),
+    supabase
+      .from("company_balance_transactions")
+      .select("*")
+      .eq("company_id", id)
+      .order("created_at", { ascending: false })
+      .returns<CompanyBalanceTransaction[]>(),
   ]);
 
   if (!companyRes.data) notFound();
@@ -83,6 +97,23 @@ export default async function CariDetayPage({ params }: { params: Promise<{ id: 
               <p className="text-sm text-neutral-500">Bu cariye ait kullanıcı yok.</p>
             )}
             <InviteUserForm companyId={company.id} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-brand-600" />
+              Açık Hesap
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BalanceManager
+              companyId={company.id}
+              balance={company.balance}
+              blockEnabled={company.balance_block_enabled}
+              transactions={balanceTxRes.data ?? []}
+            />
           </CardContent>
         </Card>
 

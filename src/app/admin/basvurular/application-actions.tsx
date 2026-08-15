@@ -18,19 +18,17 @@ export function ApplicationActions({
   const [discountRate, setDiscountRate] = useState(0);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ tempPassword: string; email: string } | null>(null);
+  const [result, setResult] = useState<{ email: string } | null>(null);
   const [showApprove, setShowApprove] = useState(false);
 
   if (result) {
     return (
       <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm">
-        <p className="font-medium text-emerald-800">Üyelik oluşturuldu.</p>
+        <p className="font-medium text-emerald-800">Üyelik onaylandı.</p>
         <p className="mt-1 text-emerald-700">
-          E-posta: <span className="font-mono">{result.email}</span>
-          <br />
-          Geçici şifre: <span className="font-mono">{result.tempPassword}</span>
+          <span className="font-mono">{result.email}</span> başvuru sırasında belirlediği şifreyle giriş
+          yapabilir.
         </p>
-        <p className="mt-1 text-xs text-emerald-700">Bu bilgiyi fotoğrafçıya iletin, bir daha gösterilmeyecek.</p>
       </div>
     );
   }
@@ -56,7 +54,7 @@ export function ApplicationActions({
               startTransition(async () => {
                 const res = await approveApplicationAction(applicationId, discountRate);
                 if (res.error) setError(res.error);
-                else if (res.tempPassword && res.email) setResult({ tempPassword: res.tempPassword, email: res.email });
+                else if (res.email) setResult({ email: res.email });
               })
             }
           >

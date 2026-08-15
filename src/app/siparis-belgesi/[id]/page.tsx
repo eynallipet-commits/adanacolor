@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getOrderDetail } from "@/lib/orders";
 import { createClient } from "@/lib/supabase/server";
+import { getAppSettings } from "@/lib/settings";
 import { formatDate, formatTL } from "@/lib/utils";
 import type { Company } from "@/lib/database.types";
 import { Logo } from "@/components/layout/logo";
@@ -26,11 +27,14 @@ export default async function SiparisBelgesiPage({ params }: { params: Promise<{
 
   const { order, items } = detail;
   const supabase = await createClient();
-  const { data: company } = await supabase
-    .from("companies")
-    .select("*")
-    .eq("id", order.company_id)
-    .single<Company>();
+  const [{ data: company }, settings] = await Promise.all([
+    supabase.from("companies").select("*").eq("id", order.company_id).single<Company>(),
+    getAppSettings(),
+  ]);
+
+  const kdvRate = settings.invoice_kdv_rate;
+  const matrah = order.total / (1 + kdvRate / 100);
+  const kdvAmount = order.total - matrah;
 
   const backHref = profile.role === "admin" ? `/admin/siparisler/${order.id}` : `/panel/siparisler/${order.id}`;
 
@@ -43,11 +47,22 @@ export default async function SiparisBelgesiPage({ params }: { params: Promise<{
             <Logo height={30} />
             <p className="mt-1 text-sm text-neutral-500">{SELLER.name}</p>
             <p className="text-sm text-neutral-500">{SELLER.address}</p>
+            {settings.invoice_seller_tax_office && (
+              <p className="text-sm text-neutral-500">
+                {settings.invoice_seller_tax_office}
+                {settings.invoice_seller_tax_no ? ` · VKN ${settings.invoice_seller_tax_no}` : ""}
+              </p>
+            )}
+            {settings.invoice_seller_iban && (
+              <p className="text-sm text-neutral-500">IBAN: {settings.invoice_seller_iban}</p>
+            )}
           </div>
           <div className="text-right">
-            <p className="text-lg font-semibold text-neutral-900">Sipariş Belgesi</p>
-            <p className="text-sm text-neutral-500">Proforma — resmi e-fatura değildir</p>
-            <p className="mt-2 text-sm font-medium text-neutral-700">{order.order_no}</p>
+            <p className="text-lg font-semibold text-neutral-900">Fatura</p>
+            <p className="text-sm text-neutral-500">
+              {order.invoice_no ?? "Ödeme onaylandığında numaralandırılır"}
+            </p>
+            <p className="mt-2 text-sm font-medium text-neutral-700">Sipariş No: {order.order_no}</p>
             <p className="text-sm text-neutral-500">{formatDate(order.created_at)}</p>
           </div>
         </div>
@@ -56,6 +71,7 @@ export default async function SiparisBelgesiPage({ params }: { params: Promise<{
           <div>
             <p className="font-semibold text-neutral-900">Alıcı</p>
             <p className="mt-1 text-neutral-600">{company?.name}</p>
+            {company?.tax_office && <p className="text-neutral-600">{company.tax_office}</p>}
             {company?.tax_no && <p className="text-neutral-600">Vergi No: {company.tax_no}</p>}
             {company?.address && <p className="text-neutral-600">{company.address}</p>}
             {company?.phone && <p className="text-neutral-600">{company.phone}</p>}
@@ -113,14 +129,22 @@ export default async function SiparisBelgesiPage({ params }: { params: Promise<{
             <span className="text-neutral-500">İskonto (%{order.discount_rate})</span>
             <span>-{formatTL(order.discount_amount)}</span>
           </div>
+          <div className="flex justify-between">
+            <span className="text-neutral-500">Matrah</span>
+            <span>{formatTL(matrah)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-neutral-500">KDV (%{kdvRate})</span>
+            <span>{formatTL(kdvAmount)}</span>
+          </div>
           <div className="flex justify-between border-t border-neutral-200 pt-1 text-base font-bold text-neutral-900">
-            <span>Toplam</span>
+            <span>Genel Toplam</span>
             <span>{formatTL(order.total)}</span>
           </div>
         </div>
 
         <p className="mt-12 text-center text-xs text-neutral-400">
-          Bu belge bilgilendirme amaçlıdır, resmi bir e-fatura/e-arşiv fatura yerine geçmez.
+          Tutarlara %{kdvRate} KDV dahildir. Bu belge muhasebe kayıtları için düzenlenmiştir.
         </p>
       </div>
     </div>

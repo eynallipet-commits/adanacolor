@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
 import {
   ShieldCheck,
   Truck,
@@ -24,6 +25,29 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { COMPANY } from "@/lib/company";
 import { cn } from "@/lib/utils";
 import type { AlbumModel } from "@/lib/database.types";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("app_settings")
+    .select("seo_meta_title,seo_meta_description")
+    .eq("id", true)
+    .single();
+
+  const title = data?.seo_meta_title || undefined;
+  const description = data?.seo_meta_description || undefined;
+
+  // Anahtarları yalnızca gerçek bir override varsa ekliyoruz — "title: undefined" gibi bir alan
+  // eklemek bile üst layout'taki varsayılanı ezip başlığı boş bırakabiliyor.
+  if (!title && !description) return {};
+  const og = { ...(title ? { title } : {}), ...(description ? { description } : {}) };
+  return {
+    ...(title ? { title } : {}),
+    ...(description ? { description } : {}),
+    openGraph: og,
+    twitter: og,
+  };
+}
 
 const steps = [
   {
@@ -109,8 +133,37 @@ export default async function Home() {
   ];
   const showcase = showcaseRes.data ?? [];
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    name: COMPANY.legalName,
+    alternateName: COMPANY.brandName,
+    description: COMPANY.tagline,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: COMPANY.addressLine,
+      addressLocality: COMPANY.city,
+      addressCountry: COMPANY.country,
+    },
+    ...(COMPANY.coordinates
+      ? {
+          geo: {
+            "@type": "GeoCoordinates",
+            latitude: COMPANY.coordinates.lat,
+            longitude: COMPANY.coordinates.lng,
+          },
+        }
+      : {}),
+    telephone: COMPANY.phone || undefined,
+    url: "https://adanacoloralbum.com",
+  };
+
   return (
     <main className="flex-1 bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* ÜST BAR */}
       <div className="hidden bg-ink-950 py-2 text-xs text-ink-300 md:block">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
@@ -171,8 +224,10 @@ export default async function Home() {
               yakışan <span className="text-gold-400">üretim</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-300">
-              {COMPANY.legalName} olarak fotoğrafçılar ve stüdyolar için albüm, canvas ve baskı
-              üretiyoruz. Siparişten teslimata kadar her adımı tek panelden şeffaf şekilde yönetin.
+              {COMPANY.legalName} olarak fotoğrafçılar ve stüdyolar için fotoğraf albümü baskı,
+              canvas ve foto büyütme üretiyoruz. Düğün, nişan ve stüdyo albümlerinizi kendi
+              atölyemizde toptan üretir, siparişten teslimata kadar her adımı tek panelden şeffaf
+              şekilde yönetmenizi sağlarız — {COMPANY.city} merkezli, tüm Türkiye&apos;ye kargo.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Link href="/basvuru" className={cn(buttonVariants({ size: "lg" }), "group")}>

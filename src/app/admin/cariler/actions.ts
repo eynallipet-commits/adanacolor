@@ -17,20 +17,32 @@ export async function createCompanyAction(_prev: FormState, formData: FormData):
   const name = String(formData.get("name") || "").trim();
   if (!name) return { error: "Firma adı zorunludur." };
 
+  const openingBalance = Number(formData.get("opening_balance") || 0);
+
   const { data, error } = await supabase
     .from("companies")
     .insert({
       name,
       tax_no: String(formData.get("tax_no") || "").trim() || null,
+      tax_office: String(formData.get("tax_office") || "").trim() || null,
       address: String(formData.get("address") || "").trim() || null,
       phone: String(formData.get("phone") || "").trim() || null,
       email: String(formData.get("email") || "").trim() || null,
       discount_rate: Number(formData.get("discount_rate") || 0),
+      balance_block_enabled: formData.get("balance_block_enabled") === "on",
     })
     .select("id")
     .single();
 
   if (error || !data) return { error: "Cari oluşturulamadı: " + (error?.message ?? "") };
+
+  if (Number.isFinite(openingBalance) && openingBalance !== 0) {
+    await supabase.rpc("adjust_company_balance", {
+      p_company_id: data.id,
+      p_amount: openingBalance,
+      p_note: "Açılış bakiyesi",
+    });
+  }
 
   revalidatePath("/admin/cariler");
   redirect(`/admin/cariler/${data.id}`);
@@ -45,6 +57,7 @@ export async function updateCompanyAction(companyId: string, formData: FormData)
     .update({
       name: String(formData.get("name") || "").trim(),
       tax_no: String(formData.get("tax_no") || "").trim() || null,
+      tax_office: String(formData.get("tax_office") || "").trim() || null,
       address: String(formData.get("address") || "").trim() || null,
       phone: String(formData.get("phone") || "").trim() || null,
       email: String(formData.get("email") || "").trim() || null,
@@ -58,27 +71,24 @@ export async function updateCompanyAction(companyId: string, formData: FormData)
   return {};
 }
 
-function generateTempPassword() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-  let out = "";
-  for (let i = 0; i < 10; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
-}
-
 export interface InviteResult {
   error?: string;
-  tempPassword?: string;
 }
 
-export async function inviteUserAction(companyId: string, email: string, fullName: string): Promise<InviteResult> {
+export async function inviteUserAction(
+  companyId: string,
+  email: string,
+  fullName: string,
+  password: string
+): Promise<InviteResult> {
   await requireAdmin();
   if (!email) return { error: "E-posta gerekli." };
+  if (password.length < 6) return { error: "Şifre en az 6 karakter olmalı." };
   const adminClient = createAdminClient();
 
-  const tempPassword = generateTempPassword();
   const { data: userRes, error: userError } = await adminClient.auth.admin.createUser({
     email,
-    password: tempPassword,
+    password,
     email_confirm: true,
   });
   if (userError || !userRes.user) return { error: userError?.message ?? "Kullanıcı oluşturulamadı." };
@@ -93,7 +103,39 @@ export async function inviteUserAction(companyId: string, email: string, fullNam
   if (profileError) return { error: profileError.message };
 
   revalidatePath(`/admin/cariler/${companyId}`);
-  return { tempPassword };
+  return {};
+}
+
+export async function adjustCompanyBalanceAction(companyId: string, amount: number, note: string): Promise<FormState> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  if (!Number.isFinite(amount) || amount === 0) return { error: "Geçerli bir tutar girin." };
+
+  const { error } = await supabase.rpc("adjust_company_balance", {
+    p_company_id: companyId,
+    p_amount: amount,
+    p_note: note || null,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/cariler/${companyId}`);
+  revalidatePath("/admin/raporlar");
+  return {};
+}
+
+export async function toggleBalanceBlockAction(companyId: string, enabled: boolean): Promise<FormState> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("companies")
+    .update({ balance_block_enabled: enabled })
+    .eq("id", companyId);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/cariler/${companyId}`);
+  return {};
 }
 
 export async function addCompanyAlbumModelAction(companyId: string, formData: FormData): Promise<FormState> {

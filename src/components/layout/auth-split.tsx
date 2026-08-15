@@ -19,7 +19,7 @@ export function AuthSplit({ children }: { children: React.ReactNode }) {
             <Logo height={28} />
           </Link>
           <p className="mt-3 max-w-sm text-neutral-300">
-            Fotoğrafçılar için B2B albüm, canvas ve baskı sipariş platformu.
+            Fotoğrafçılar için özel albüm, canvas ve baskı üretimi.
           </p>
         </div>
 

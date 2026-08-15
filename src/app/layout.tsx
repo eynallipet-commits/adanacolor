@@ -18,13 +18,42 @@ const playfair = Playfair_Display({
   weight: ["600", "700", "800"],
 });
 
+const SITE_URL = "https://adanacoloralbum.com";
+const SITE_TITLE = "Adana Color Albüm — Fotoğrafçılar için Albüm Üretimi";
+const SITE_DESCRIPTION =
+  "Fotoğrafçılara özel fotoğraf albümü, canvas ve foto baskı üretimi. Adana'dan tüm Türkiye'ye toptan albüm baskı, hızlı üretim ve güvenilir kargo.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Adana Color Albüm — B2B Fotoğraf Albümü Sipariş Platformu",
+    default: SITE_TITLE,
     template: "%s · Adana Color Albüm",
   },
-  description:
-    "Fotoğrafçılar için B2B albüm, canvas ve baskı sipariş platformu. Güvenli ödeme, cari bazlı iskonto, üretim ve kargo takibi tek panelde.",
+  description: SITE_DESCRIPTION,
+  keywords: [
+    "fotoğraf albümü baskı",
+    "toptan albüm üretimi",
+    "fotoğrafçılar için albüm",
+    "düğün albümü baskı",
+    "canvas baskı",
+    "foto büyütme baskı",
+    "Adana albüm baskı",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "tr_TR",
+    siteName: "Adana Color Albüm",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    images: [{ url: "/logo.png" }],
+  },
+  twitter: {
+    card: "summary",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: ["/logo.png"],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
