@@ -27,6 +27,7 @@ export interface Company {
   balance: number;
   balance_block_enabled: boolean;
   tax_office: string | null;
+  contact_name: string | null;
   created_at: string;
 }
 

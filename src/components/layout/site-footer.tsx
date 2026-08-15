@@ -56,11 +56,6 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/#surec" className="transition-colors hover:text-white">
-                  Çalışma Sürecimiz
-                </Link>
-              </li>
-              <li>
                 <Link href="/#iletisim" className="transition-colors hover:text-white">
                   İletişim
                 </Link>

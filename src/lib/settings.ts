@@ -9,6 +9,10 @@ export interface AppSettings {
   invoice_kdv_rate: number;
   seo_meta_title: string | null;
   seo_meta_description: string | null;
+  ga_measurement_id: string | null;
+  gtm_id: string | null;
+  facebook_pixel_id: string | null;
+  google_site_verification: string | null;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -20,17 +24,18 @@ const DEFAULT_SETTINGS: AppSettings = {
   invoice_kdv_rate: 20,
   seo_meta_title: null,
   seo_meta_description: null,
+  ga_measurement_id: null,
+  gtm_id: null,
+  facebook_pixel_id: null,
+  google_site_verification: null,
 };
+
+const SETTINGS_COLUMNS =
+  "estimated_min_days,estimated_max_days,invoice_seller_tax_office,invoice_seller_tax_no,invoice_seller_iban,invoice_kdv_rate,seo_meta_title,seo_meta_description,ga_measurement_id,gtm_id,facebook_pixel_id,google_site_verification";
 
 export async function getAppSettings(): Promise<AppSettings> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("app_settings")
-    .select(
-      "estimated_min_days,estimated_max_days,invoice_seller_tax_office,invoice_seller_tax_no,invoice_seller_iban,invoice_kdv_rate,seo_meta_title,seo_meta_description"
-    )
-    .eq("id", true)
-    .single();
+  const { data } = await supabase.from("app_settings").select(SETTINGS_COLUMNS).eq("id", true).single();
   return data ?? DEFAULT_SETTINGS;
 }
 

@@ -5,6 +5,8 @@ import { updateCompanyAction } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { TaxNoInput } from "@/components/ui/tax-no-input";
 import type { Company } from "@/lib/database.types";
 
 export function CompanyEditForm({ company }: { company: Company }) {
@@ -37,8 +39,12 @@ export function CompanyEditForm({ company }: { company: Company }) {
           <Input id="discount_rate" name="discount_rate" type="number" min={0} max={100} defaultValue={company.discount_rate} />
         </div>
         <div>
+          <Label htmlFor="contact_name">Yetkili Adı Soyadı</Label>
+          <Input id="contact_name" name="contact_name" defaultValue={company.contact_name ?? ""} />
+        </div>
+        <div>
           <Label htmlFor="tax_no">Vergi No</Label>
-          <Input id="tax_no" name="tax_no" defaultValue={company.tax_no ?? ""} />
+          <TaxNoInput id="tax_no" name="tax_no" defaultValue={company.tax_no ?? ""} />
         </div>
         <div>
           <Label htmlFor="tax_office">Vergi Dairesi</Label>
@@ -46,7 +52,7 @@ export function CompanyEditForm({ company }: { company: Company }) {
         </div>
         <div>
           <Label htmlFor="phone">Telefon</Label>
-          <Input id="phone" name="phone" defaultValue={company.phone ?? ""} />
+          <PhoneInput id="phone" name="phone" defaultValue={company.phone ?? ""} />
         </div>
         <div>
           <Label htmlFor="email">E-posta</Label>

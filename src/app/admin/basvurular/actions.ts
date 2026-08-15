@@ -32,6 +32,7 @@ export async function approveApplicationAction(applicationId: string, discountRa
     .from("companies")
     .insert({
       name: application.company_name,
+      contact_name: application.contact_name,
       tax_no: application.tax_no,
       address: application.address,
       phone: application.phone,

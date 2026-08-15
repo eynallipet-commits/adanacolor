@@ -23,6 +23,7 @@ export async function createCompanyAction(_prev: FormState, formData: FormData):
     .from("companies")
     .insert({
       name,
+      contact_name: String(formData.get("contact_name") || "").trim() || null,
       tax_no: String(formData.get("tax_no") || "").trim() || null,
       tax_office: String(formData.get("tax_office") || "").trim() || null,
       address: String(formData.get("address") || "").trim() || null,
@@ -56,6 +57,7 @@ export async function updateCompanyAction(companyId: string, formData: FormData)
     .from("companies")
     .update({
       name: String(formData.get("name") || "").trim(),
+      contact_name: String(formData.get("contact_name") || "").trim() || null,
       tax_no: String(formData.get("tax_no") || "").trim() || null,
       tax_office: String(formData.get("tax_office") || "").trim() || null,
       address: String(formData.get("address") || "").trim() || null,
@@ -135,6 +137,39 @@ export async function toggleBalanceBlockAction(companyId: string, enabled: boole
   if (error) return { error: error.message };
 
   revalidatePath(`/admin/cariler/${companyId}`);
+  return {};
+}
+
+export async function deleteCompanyAction(companyId: string): Promise<FormState> {
+  await requireAdmin();
+  const adminClient = createAdminClient();
+
+  // Bağlı kullanıcıları önce not ediyoruz ama SİLMİYORUZ — cari silme siparişler yüzünden
+  // başarısız olursa (FK), kullanıcı hesapları dokunulmadan kalmalı.
+  const { data: profiles } = await adminClient.from("profiles").select("id").eq("company_id", companyId);
+
+  const { error } = await adminClient.from("companies").delete().eq("id", companyId);
+  if (error) {
+    return {
+      error:
+        error.code === "23503"
+          ? "Bu cari geçmiş siparişlerde kullanıldığı için silinemez."
+          : error.message,
+    };
+  }
+
+  // Cari başarıyla silindi — artık company_id'siz kalan kullanıcı hesaplarını da temizle.
+  for (const p of profiles ?? []) {
+    await adminClient.auth.admin.deleteUser(p.id);
+  }
+  if (profiles && profiles.length > 0) {
+    await adminClient
+      .from("profiles")
+      .delete()
+      .in("id", profiles.map((p) => p.id));
+  }
+
+  revalidatePath("/admin/cariler");
   return {};
 }
 

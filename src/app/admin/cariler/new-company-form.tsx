@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { TaxNoInput } from "@/components/ui/tax-no-input";
 
 const initialState: FormState = {};
 
@@ -38,8 +40,12 @@ export function NewCompanyForm() {
               <Input id="discount_rate" name="discount_rate" type="number" min={0} max={100} defaultValue={0} />
             </div>
             <div>
+              <Label htmlFor="contact_name">Yetkili Adı Soyadı</Label>
+              <Input id="contact_name" name="contact_name" />
+            </div>
+            <div>
               <Label htmlFor="tax_no">Vergi No</Label>
-              <Input id="tax_no" name="tax_no" />
+              <TaxNoInput id="tax_no" name="tax_no" />
             </div>
             <div>
               <Label htmlFor="tax_office">Vergi Dairesi</Label>
@@ -47,7 +53,7 @@ export function NewCompanyForm() {
             </div>
             <div>
               <Label htmlFor="phone">Telefon</Label>
-              <Input id="phone" name="phone" />
+              <PhoneInput id="phone" name="phone" />
             </div>
             <div>
               <Label htmlFor="email">E-posta</Label>

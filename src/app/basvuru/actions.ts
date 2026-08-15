@@ -36,6 +36,12 @@ export async function applyAction(_prevState: ApplyState, formData: FormData): P
   if (!company_name || !contact_name || !email || !phone) {
     return { error: "Firma adı, yetkili adı, e-posta ve telefon zorunludur." };
   }
+  if (phone.length !== 10 && phone.length !== 11) {
+    return { error: "Telefon numarası geçersiz." };
+  }
+  if (tax_no && tax_no.length !== 10 && tax_no.length !== 11) {
+    return { error: "Vergi No / TC Kimlik No 10 veya 11 haneli olmalı." };
+  }
   if (!kvkkConsent) {
     return { error: "Devam etmek için KVKK Aydınlatma Metni'ni onaylamanız gerekiyor." };
   }

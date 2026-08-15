@@ -3,19 +3,18 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import {
   ShieldCheck,
-  Truck,
-  PercentCircle,
   ArrowRight,
-  UserPlus,
   CheckCircle2,
   ShoppingBag,
-  PackageCheck,
   Layers,
   Palette,
   Ruler,
   Factory,
-  Headset,
-  FileCheck2,
+  Gem,
+  Hammer,
+  Clock,
+  PackageCheck,
+  Handshake,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Logo } from "@/components/layout/logo";
@@ -49,59 +48,36 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-const steps = [
+const values = [
   {
-    icon: UserPlus,
-    title: "Üyelik Başvurusu",
-    desc: "Firma bilgileriniz ve vergi levhanızla başvurun; ekibimiz kısa sürede değerlendirsin.",
+    icon: Gem,
+    title: "Premium Malzeme Kalitesi",
+    desc: "Yıllar geçse de solmayacak, seçkin kalitede kumaş ve baskı malzemeleriyle üretim yapıyoruz.",
   },
   {
-    icon: CheckCircle2,
-    title: "Cari Hesabınız Açılsın",
-    desc: "Onay sonrası firmanıza özel iskonto oranınızla panelinize giriş yapın.",
+    icon: Hammer,
+    title: "Usta İşçiliği",
+    desc: "Her albüm, deneyimli ustalarımızın elinden özenle geçerek son haline kavuşur.",
   },
   {
-    icon: ShoppingBag,
-    title: "Siparişinizi Oluşturun",
-    desc: "Ebat, paket, kapak modeli ve rengi seçin; fotoğraflarınızı yükleyip ödemeyi tamamlayın.",
+    icon: Clock,
+    title: "Zamanında Teslimat",
+    desc: "Planlı üretim takvimimizle siparişlerinizi söz verdiğimiz sürede kargoya teslim ederiz.",
   },
   {
     icon: PackageCheck,
-    title: "Üretim ve Kargo",
-    desc: "Siparişinizin üretim ve kargo durumunu panelinizden adım adım takip edin.",
+    title: "Güvenli Paketleme",
+    desc: "Ürünleriniz yolculuk boyunca hasar görmeyecek şekilde özenle paketlenip gönderilir.",
   },
-];
-
-const values = [
+  {
+    icon: Handshake,
+    title: "Uzun Soluklu İş Ortaklığı",
+    desc: "Tek seferlik değil; yıllara yayılan, güvene dayalı ve sürdürülebilir iş birlikleri kurarız.",
+  },
   {
     icon: Factory,
-    title: "Kendi Atölyemizde Üretim",
-    desc: "Albüm, canvas ve baskı üretimi kendi atölyemizde yapılır; kalite kontrolü bize aittir.",
-  },
-  {
-    icon: PercentCircle,
-    title: "Cariye Özel Fiyatlandırma",
-    desc: "Firmanıza tanımlanan iskonto oranı tüm siparişlerinize otomatik olarak yansır.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Peşin ve Güvenli Ödeme",
-    desc: "Kredi kartı veya havale ile ödeme; onay alınmadan üretime başlanmaz, sürpriz maliyet çıkmaz.",
-  },
-  {
-    icon: Truck,
-    title: "Şeffaf Kargo Takibi",
-    desc: "Kargo firması ve takip numarası panelinize işlenir, siparişinizin nerede olduğunu bilirsiniz.",
-  },
-  {
-    icon: FileCheck2,
-    title: "Belgeli Süreç",
-    desc: "Her sipariş için yazdırılabilir sipariş belgesi; muhasebenizle uyumlu, kayıt altında çalışma.",
-  },
-  {
-    icon: Headset,
-    title: "Doğrudan İletişim",
-    desc: "Aracı yok. Üretimi yapan ekiple doğrudan görüşür, özel taleplerinizi net şekilde iletirsiniz.",
+    title: "Profesyonel Üretim Altyapısı",
+    desc: "Modern baskı ve üretim ekipmanlarıyla, kendi atölyemizde uçtan uca kalite kontrolü sağlarız.",
   },
 ];
 
@@ -186,9 +162,6 @@ export default async function Home() {
             <Link href="#urunler" className="hidden text-sm font-medium text-neutral-600 hover:text-ink-900 lg:inline">
               Ürünler
             </Link>
-            <Link href="#surec" className="hidden text-sm font-medium text-neutral-600 hover:text-ink-900 lg:inline">
-              Süreç
-            </Link>
             <Link href="#iletisim" className="hidden text-sm font-medium text-neutral-600 hover:text-ink-900 lg:inline">
               İletişim
             </Link>
@@ -216,7 +189,7 @@ export default async function Home() {
           <div className="lg:col-span-6">
             <p className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-gold-400">
               <span className="h-px w-8 bg-gold-400" />
-              {COMPANY.city} · Albüm Atölyesi
+              Adana Color · Albüm Atölyesi
             </p>
             <h1 className="font-display mt-6 text-4xl font-bold leading-[1.1] text-white sm:text-5xl lg:text-6xl">
               Fotoğraflarınıza
@@ -422,39 +395,13 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* SÜREÇ */}
-      <section id="surec" className="scroll-mt-20 border-b border-neutral-200 bg-white py-20">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-600">Çalışma Sürecimiz</p>
-            <h2 className="font-display mt-4 text-3xl font-bold text-ink-900 sm:text-4xl">
-              Başvurudan teslimata dört adım
-            </h2>
-          </div>
-          <div className="mt-14 grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
-            {steps.map((s, i) => (
-              <div key={s.title} className="relative">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-ink-900 text-white">
-                    <s.icon className="h-5 w-5" />
-                  </span>
-                  <span className="font-display text-4xl font-bold text-ink-100">{String(i + 1).padStart(2, "0")}</span>
-                </div>
-                <h3 className="mt-5 text-base font-semibold text-ink-900">{s.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-neutral-600">{s.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* NEDEN BİZ */}
       <section className="border-b border-neutral-200 bg-ink-50 py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-600">Neden Adana Color</p>
             <h2 className="font-display mt-4 text-3xl font-bold text-ink-900 sm:text-4xl">
-              Kurumsal çalışan firmalar için
+              Kaliteden ödün vermeyen bir üretim anlayışı
             </h2>
           </div>
           <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">

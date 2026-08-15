@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { TaxNoInput } from "@/components/ui/tax-no-input";
 import { createClient } from "@/lib/supabase/client";
 import {
   ALLOWED_DOCUMENT_TYPES,
@@ -97,11 +99,11 @@ export function ApplyForm() {
         </div>
         <div>
           <Label htmlFor="phone">Telefon *</Label>
-          <Input id="phone" name="phone" type="tel" required />
+          <PhoneInput id="phone" name="phone" required />
         </div>
         <div>
           <Label htmlFor="tax_no">Vergi No</Label>
-          <Input id="tax_no" name="tax_no" />
+          <TaxNoInput id="tax_no" name="tax_no" />
         </div>
         <div>
           <Label htmlFor="address">Adres</Label>

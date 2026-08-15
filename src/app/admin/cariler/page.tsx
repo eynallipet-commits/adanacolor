@@ -33,6 +33,7 @@ export default async function CarilerPage() {
               <THead>
                 <TR>
                   <TH>Firma</TH>
+                  <TH>Yetkili</TH>
                   <TH>Telefon</TH>
                   <TH>E-posta</TH>
                   <TH className="text-right">İskonto</TH>
@@ -48,6 +49,7 @@ export default async function CarilerPage() {
                         {c.name}
                       </Link>
                     </TD>
+                    <TD className="text-neutral-500">{c.contact_name || "—"}</TD>
                     <TD className="text-neutral-500">{c.phone || "—"}</TD>
                     <TD className="text-neutral-500">{c.email || "—"}</TD>
                     <TD className="text-right">%{c.discount_rate}</TD>

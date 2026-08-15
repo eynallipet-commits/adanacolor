@@ -26,3 +26,24 @@ export async function updateSeoSettingsAction(_prev: FormState, formData: FormDa
   revalidatePath("/");
   return {};
 }
+
+export async function updateAnalyticsSettingsAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("app_settings")
+    .update({
+      ga_measurement_id: String(formData.get("ga_measurement_id") || "").trim() || null,
+      gtm_id: String(formData.get("gtm_id") || "").trim() || null,
+      facebook_pixel_id: String(formData.get("facebook_pixel_id") || "").trim() || null,
+      google_site_verification: String(formData.get("google_site_verification") || "").trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", true);
+
+  if (error) return { error: error.message };
+  revalidatePath("/admin/ayarlar");
+  revalidatePath("/", "layout");
+  return {};
+}

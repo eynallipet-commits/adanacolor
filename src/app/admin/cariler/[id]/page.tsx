@@ -21,6 +21,7 @@ import { CompanyEditForm } from "./company-edit-form";
 import { InviteUserForm } from "./invite-user-form";
 import { CustomAlbumModels, CustomExtraProducts } from "./custom-products";
 import { BalanceManager } from "./balance-manager";
+import { DeleteCompanyButton } from "./delete-company-button";
 
 export default async function CariDetayPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -51,15 +52,19 @@ export default async function CariDetayPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Avatar name={company.name} className="h-12 w-12 text-base" />
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{company.name}</h1>
-          <Badge className="mt-1 gap-1 bg-brand-50 text-brand-700">
-            <PercentCircle className="h-3.5 w-3.5" />
-            İskonto %{company.discount_rate}
-          </Badge>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Avatar name={company.name} className="h-12 w-12 text-base" />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{company.name}</h1>
+            {company.contact_name && <p className="text-sm text-neutral-500">{company.contact_name}</p>}
+            <Badge className="mt-1 gap-1 bg-brand-50 text-brand-700">
+              <PercentCircle className="h-3.5 w-3.5" />
+              İskonto %{company.discount_rate}
+            </Badge>
+          </div>
         </div>
+        <DeleteCompanyButton companyId={company.id} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
