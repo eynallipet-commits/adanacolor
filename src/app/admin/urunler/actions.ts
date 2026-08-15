@@ -111,6 +111,82 @@ export async function updateGlobalAlbumModelAction(
   return {};
 }
 
+/** Geçmiş siparişlerde kullanılan kayıtlar silinemez (FK 23503) — bunun yerine pasifleştirme önerilir. */
+const IN_USE_MESSAGE =
+  "Bu kayıt geçmiş siparişlerde kullanıldığı için silinemez. Bunun yerine 'Pasifleştir' diyebilirsiniz.";
+
+export async function deleteGlobalAlbumModelAction(id: string): Promise<FormState> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.from("album_models").delete().eq("id", id);
+  if (error) return { error: error.code === "23503" ? IN_USE_MESSAGE : error.message };
+  revalidatePath("/admin/urunler");
+  revalidatePath("/panel/siparis-olustur");
+  return {};
+}
+
+export async function deleteGlobalExtraProductAction(id: string): Promise<FormState> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.from("extra_products").delete().eq("id", id);
+  if (error) return { error: error.code === "23503" ? IN_USE_MESSAGE : error.message };
+  revalidatePath("/admin/urunler");
+  revalidatePath("/panel/siparis-olustur");
+  return {};
+}
+
+export async function addAlbumSizeAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const code = String(formData.get("code") || "").trim();
+  if (!code) return { error: "Ebat kodu gerekli (örn: 30x60)." };
+  const sortOrder = Number(formData.get("sort_order") || 0);
+  const { error } = await supabase
+    .from("album_sizes")
+    .insert({ code, sort_order: Number.isFinite(sortOrder) ? sortOrder : 0 });
+  if (error) {
+    return { error: error.code === "23505" ? "Bu ebat kodu zaten kayıtlı." : error.message };
+  }
+  revalidatePath("/admin/urunler");
+  revalidatePath("/panel/siparis-olustur");
+  return {};
+}
+
+export async function updateAlbumSizeAction(id: string, code: string, sortOrder: number): Promise<FormState> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const trimmed = code.trim();
+  if (!trimmed) return { error: "Ebat kodu gerekli." };
+  const { error } = await supabase
+    .from("album_sizes")
+    .update({ code: trimmed, sort_order: sortOrder })
+    .eq("id", id);
+  if (error) {
+    return { error: error.code === "23505" ? "Bu ebat kodu zaten kayıtlı." : error.message };
+  }
+  revalidatePath("/admin/urunler");
+  revalidatePath("/panel/siparis-olustur");
+  return {};
+}
+
+export async function deleteAlbumSizeAction(id: string): Promise<FormState> {
+  await requireAdmin();
+  const supabase = await createClient();
+  // album_size_prices ve album_model_sizes cascade ile temizlenir; sipariş varsa FK engeller.
+  const { error } = await supabase.from("album_sizes").delete().eq("id", id);
+  if (error) {
+    return {
+      error:
+        error.code === "23503"
+          ? "Bu ebat geçmiş siparişlerde kullanıldığı için silinemez."
+          : error.message,
+    };
+  }
+  revalidatePath("/admin/urunler");
+  revalidatePath("/panel/siparis-olustur");
+  return {};
+}
+
 export async function addAlbumColorAction(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireAdmin();
   const supabase = await createClient();

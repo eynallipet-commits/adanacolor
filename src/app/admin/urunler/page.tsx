@@ -16,6 +16,7 @@ import { getAppSettings } from "@/lib/settings";
 import { PriceMatrix } from "./price-matrix";
 import { GlobalAlbumModels, GlobalExtraProducts } from "./global-products";
 import { ColorPalette } from "./color-palette";
+import { SizeManager } from "./size-manager";
 import { DeliverySettingsForm } from "./delivery-settings-form";
 
 function groupBy(rows: { model_id: string }[], key: "size_id" | "color_id") {
@@ -72,8 +73,9 @@ export default async function UrunlerPage() {
           </CardTitle>
           <CardDescription>Hücreye tıklayıp fiyatı değiştirin, alandan çıkınca otomatik kaydedilir.</CardDescription>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent className="space-y-4">
           <PriceMatrix sizes={sizesRes.data ?? []} packages={packagesRes.data ?? []} prices={pricesRes.data ?? []} />
+          <SizeManager sizes={sizesRes.data ?? []} />
         </CardContent>
       </Card>
 

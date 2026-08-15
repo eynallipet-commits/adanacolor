@@ -6,6 +6,8 @@ import { ImageOff, Loader2, UploadCloud } from "lucide-react";
 import {
   addGlobalAlbumModelAction,
   addGlobalExtraProductAction,
+  deleteGlobalAlbumModelAction,
+  deleteGlobalExtraProductAction,
   toggleGlobalAlbumModelAction,
   toggleGlobalExtraProductAction,
   updateGlobalAlbumModelAction,
@@ -16,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import { EXTRA_CATEGORY_LABELS } from "@/lib/order-status";
 import { formatTL, cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -290,13 +293,16 @@ function AlbumModelRow({
           idPrefix={`edit-color-${model.id}`}
         />
         {error && <p className="text-xs text-red-600">{error}</p>}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" disabled={isPending} onClick={handleSave}>
             {isPending ? "Kaydediliyor..." : "Kaydet"}
           </Button>
           <Button size="sm" variant="ghost" disabled={isPending} onClick={handleCancel}>
             Vazgeç
           </Button>
+          <span className="ml-auto">
+            <ConfirmDelete onConfirm={() => deleteGlobalAlbumModelAction(model.id)} label="Modeli Sil" />
+          </span>
         </div>
       </li>
     );
@@ -463,13 +469,16 @@ function ExtraProductRow({ extra }: { extra: ExtraProduct }) {
         </div>
         <ImageUploadField label="Görsel" currentUrl={imageUrl} folder="extra-products" onChange={setImageUrl} />
         {error && <p className="text-xs text-red-600">{error}</p>}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" disabled={isPending} onClick={handleSave}>
             {isPending ? "Kaydediliyor..." : "Kaydet"}
           </Button>
           <Button size="sm" variant="ghost" disabled={isPending} onClick={handleCancel}>
             Vazgeç
           </Button>
+          <span className="ml-auto">
+            <ConfirmDelete onConfirm={() => deleteGlobalExtraProductAction(extra.id)} label="Ürünü Sil" />
+          </span>
         </div>
       </li>
     );
