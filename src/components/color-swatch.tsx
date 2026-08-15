@@ -6,7 +6,7 @@ import type { AlbumColor } from "@/lib/database.types";
 export function ColorSwatch({
   color,
   className,
-  sizes = "96px",
+  sizes = "240px",
   quality = 90,
 }: {
   color: Pick<AlbumColor, "code" | "name" | "hex" | "image_url">;

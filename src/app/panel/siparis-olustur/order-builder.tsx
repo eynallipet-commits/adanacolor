@@ -526,7 +526,7 @@ export function OrderBuilder({
                             aria-pressed={selected}
                           >
                             <span className="relative">
-                              <ColorSwatch color={c} className="h-16 w-20" sizes="80px" />
+                              <ColorSwatch color={c} className="h-16 w-20" sizes="240px" quality={95} />
                               {selected && (
                                 <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-white">
                                   <Check className="h-2.5 w-2.5" />
@@ -619,7 +619,7 @@ export function OrderBuilder({
                         selected ? "border-brand-600 shadow-sm" : "border-neutral-200 hover:border-neutral-300"
                       )}
                     >
-                      <div className="relative aspect-[4/3] w-full bg-neutral-50">
+                      <div className="relative aspect-[3/4] w-full bg-neutral-50">
                         {representative?.image_url ? (
                           <Image
                             src={representative.image_url}
@@ -627,7 +627,7 @@ export function OrderBuilder({
                             fill
                             sizes="(min-width: 1024px) 220px, 33vw"
                             quality={90}
-                            className="object-cover"
+                            className="object-contain"
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center text-neutral-300">
@@ -655,7 +655,7 @@ export function OrderBuilder({
 
             {selectedExtra && (
               <div className="space-y-3 rounded-lg border border-neutral-200 p-3">
-                <div className="group relative aspect-[16/10] w-full overflow-hidden rounded-md bg-neutral-50">
+                <div className="group relative aspect-[4/5] w-full max-w-xs mx-auto overflow-hidden rounded-md bg-neutral-50 sm:max-w-sm">
                   {selectedExtra.image_url ? (
                     <Image
                       src={selectedExtra.image_url}
@@ -663,7 +663,7 @@ export function OrderBuilder({
                       fill
                       sizes="(min-width: 1024px) 480px, 90vw"
                       quality={90}
-                      className="object-cover"
+                      className="object-contain"
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center text-neutral-300">

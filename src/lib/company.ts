@@ -20,6 +20,10 @@ interface CompanyInfo {
   instagram: string;
   taxOffice: string;
   taxNumber: string;
+  /** Google Maps'te doğrulanmış tam konum — girilirse harita ve yol tarifi bunu kullanır. */
+  coordinates: { lat: number; lng: number } | null;
+  /** Google Maps paylaşım linki (ör. maps.app.goo.gl/...) — "Google Maps'te Aç" için. */
+  mapsUrl: string;
 }
 
 export const COMPANY: CompanyInfo = {
@@ -47,6 +51,10 @@ export const COMPANY: CompanyInfo = {
   /** Vergi dairesi / no, Mersis vb. — kurumsal şeffaflık için, boşsa gizlenir. */
   taxOffice: "",
   taxNumber: "",
+
+  // Google Maps paylaşım linkinden (https://maps.app.goo.gl/XaTSdKyKPtS8ibkJ9) çözümlendi.
+  coordinates: { lat: 36.9901639, lng: 35.2450924 },
+  mapsUrl: "https://maps.app.goo.gl/XaTSdKyKPtS8ibkJ9",
 };
 
 /** Footer ve iletişim bölümünde gösterilecek tek satırlık adres. */
@@ -67,9 +75,19 @@ export function mapsQuery() {
 }
 
 export function mapsEmbedUrl() {
+  if (COMPANY.coordinates) {
+    const { lat, lng } = COMPANY.coordinates;
+    return `https://www.google.com/maps?q=${lat},${lng}&z=17&output=embed`;
+  }
   return `https://www.google.com/maps?q=${encodeURIComponent(mapsQuery())}&output=embed`;
 }
 
+/** "Yol tarifi al" için — doğrulanmış koordinat varsa onu, yoksa paylaşım linkini kullanır. */
 export function mapsDirectionsUrl() {
+  if (COMPANY.coordinates) {
+    const { lat, lng } = COMPANY.coordinates;
+    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  }
+  if (COMPANY.mapsUrl) return COMPANY.mapsUrl;
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery())}`;
 }

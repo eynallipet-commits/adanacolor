@@ -109,7 +109,7 @@ function ColorTile({ color }: { color: AlbumColor }) {
               </button>
             )}
           </div>
-          <ColorSwatch color={{ code, name, hex, image_url: imageUrl }} className="h-10 w-10" />
+          <ColorSwatch color={{ code, name, hex, image_url: imageUrl }} className="h-14 w-14" quality={95} />
         </div>
         {error && <p className="text-xs text-red-600">{error}</p>}
         <div className="flex flex-wrap gap-2">
@@ -156,7 +156,7 @@ function ColorTile({ color }: { color: AlbumColor }) {
         className="flex w-full flex-col items-center gap-1 rounded-md p-1.5 hover:bg-neutral-100"
         title="Düzenlemek için tıklayın"
       >
-        <ColorSwatch color={color} className="h-10 w-full" />
+        <ColorSwatch color={color} className="h-20 w-full" sizes="320px" quality={95} />
         <span className="truncate text-[11px] font-medium text-neutral-600">{color.code}</span>
       </button>
     </li>
@@ -171,7 +171,7 @@ export function ColorPalette({ colors }: { colors: AlbumColor[] }) {
   return (
     <div className="space-y-4">
       {colors.length > 0 && (
-        <ul className="grid grid-cols-4 gap-1.5 sm:grid-cols-6 lg:grid-cols-8">
+        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
           {colors.map((c) => (
             <ColorTile key={c.id} color={c} />
           ))}
@@ -205,7 +205,7 @@ export function ColorPalette({ colors }: { colors: AlbumColor[] }) {
           <div className="flex-1">
             <SwatchUpload onUploaded={setNewImageUrl} />
           </div>
-          <ColorSwatch color={{ code: "", name: null, hex: newHex, image_url: newImageUrl }} className="h-10 w-10" />
+          <ColorSwatch color={{ code: "", name: null, hex: newHex, image_url: newImageUrl }} className="h-14 w-14" quality={95} />
         </div>
         <Button type="submit" size="sm" disabled={isPending}>
           Renk Ekle
