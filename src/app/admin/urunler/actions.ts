@@ -187,6 +187,82 @@ export async function deleteAlbumSizeAction(id: string): Promise<FormState> {
   return {};
 }
 
+export async function addPackageTypeAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const name = String(formData.get("name") || "").trim();
+  const basePageCount = Number(formData.get("base_page_count") || 0);
+  const extraPagePrice = Number(formData.get("extra_page_price") || 0);
+  const sortOrder = Number(formData.get("sort_order") || 0);
+  if (!name) return { error: "Paket/kampanya adı gerekli." };
+  if (!Number.isFinite(basePageCount) || basePageCount < 0) {
+    return { error: "Taban sayfa sayısı geçersiz." };
+  }
+  if (!Number.isFinite(extraPagePrice) || extraPagePrice < 0) {
+    return { error: "Ek sayfa ücreti geçersiz." };
+  }
+  const { error } = await supabase.from("package_types").insert({
+    // Uygulama içinde hiçbir yerde gösterilmiyor/aranmıyor — yalnızca DB'nin
+    // benzersizlik kısıtını karşılayan içsel bir anahtar.
+    code: `pkg-${crypto.randomUUID()}`,
+    name,
+    base_page_count: Math.round(basePageCount),
+    extra_page_price: Math.round(extraPagePrice * 100) / 100,
+    sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/urunler");
+  revalidatePath("/panel/siparis-olustur");
+  return {};
+}
+
+export async function updatePackageTypeAction(
+  id: string,
+  input: { name: string; basePageCount: number; extraPagePrice: number; sortOrder: number }
+): Promise<FormState> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const name = input.name.trim();
+  if (!name) return { error: "Paket/kampanya adı gerekli." };
+  if (!Number.isFinite(input.basePageCount) || input.basePageCount < 0) {
+    return { error: "Taban sayfa sayısı geçersiz." };
+  }
+  if (!Number.isFinite(input.extraPagePrice) || input.extraPagePrice < 0) {
+    return { error: "Ek sayfa ücreti geçersiz." };
+  }
+  const { error } = await supabase
+    .from("package_types")
+    .update({
+      name,
+      base_page_count: Math.round(input.basePageCount),
+      extra_page_price: Math.round(input.extraPagePrice * 100) / 100,
+      sort_order: input.sortOrder,
+    })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/urunler");
+  revalidatePath("/panel/siparis-olustur");
+  return {};
+}
+
+export async function deletePackageTypeAction(id: string): Promise<FormState> {
+  await requireAdmin();
+  const supabase = await createClient();
+  // album_size_prices cascade ile temizlenir; sipariş kaleminde kullanılmışsa FK engeller.
+  const { error } = await supabase.from("package_types").delete().eq("id", id);
+  if (error) {
+    return {
+      error:
+        error.code === "23503"
+          ? "Bu paket/kampanya geçmiş siparişlerde kullanıldığı için silinemez."
+          : error.message,
+    };
+  }
+  revalidatePath("/admin/urunler");
+  revalidatePath("/panel/siparis-olustur");
+  return {};
+}
+
 export async function addAlbumColorAction(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireAdmin();
   const supabase = await createClient();

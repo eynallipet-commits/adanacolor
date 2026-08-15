@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { EXTRA_CATEGORY_LABELS } from "@/lib/order-status";
 import { formatTL, cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -448,12 +449,9 @@ function ExtraProductRow({ extra }: { extra: ExtraProduct }) {
             <Input id={`extra-name-${extra.id}`} value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <Label htmlFor={`extra-price-${extra.id}`}>Fiyat (₺)</Label>
-            <Input
+            <Label htmlFor={`extra-price-${extra.id}`}>Fiyat</Label>
+            <CurrencyInput
               id={`extra-price-${extra.id}`}
-              type="number"
-              min={0}
-              step="0.01"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
             />
@@ -539,8 +537,8 @@ export function GlobalExtraProducts({ extras }: { extras: ExtraProduct[] }) {
             <Input id="global-extra-name" name="name" required />
           </div>
           <div>
-            <Label htmlFor="global-extra-price">Fiyat (₺)</Label>
-            <Input id="global-extra-price" name="price" type="number" min={0} step="0.01" required />
+            <Label htmlFor="global-extra-price">Fiyat</Label>
+            <CurrencyInput id="global-extra-price" name="price" required />
           </div>
         </div>
         <div>

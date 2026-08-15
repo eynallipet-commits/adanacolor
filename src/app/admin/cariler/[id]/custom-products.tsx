@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { EXTRA_CATEGORY_LABELS } from "@/lib/order-status";
 import { formatTL } from "@/lib/utils";
 import type { AlbumModel, ExtraProduct } from "@/lib/database.types";
@@ -123,7 +124,7 @@ export function CustomExtraProducts({ companyId, extras }: { companyId: string; 
         </div>
         <div>
           <Label htmlFor={`extra-price-${companyId}`}>Fiyat</Label>
-          <Input id={`extra-price-${companyId}`} name="price" type="number" min={0} step="0.01" required />
+          <CurrencyInput id={`extra-price-${companyId}`} name="price" required />
         </div>
         <Button type="submit" size="sm" className="col-span-4" disabled={isPending}>
           Ekle

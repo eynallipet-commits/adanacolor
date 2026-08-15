@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { updatePriceAction } from "./actions";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { cn } from "@/lib/utils";
 import type { AlbumSize, AlbumSizePrice, PackageType } from "@/lib/database.types";
 
@@ -14,31 +15,25 @@ function PriceCell({
   packageId: string;
   initialPrice: number | null;
 }) {
-  const [value, setValue] = useState(initialPrice?.toString() ?? "");
+  const [value, setValue] = useState(initialPrice !== null ? initialPrice.toFixed(2) : "");
   const [isPending, startTransition] = useTransition();
 
   return (
-    <div className="relative">
-      <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-neutral-400">
-        ₺
-      </span>
-      <input
-        type="number"
-        min={0}
-        step="1"
-        value={value}
-        placeholder="—"
-        onChange={(e) => setValue(e.target.value)}
-        onBlur={() => {
-          const num = Number(value);
-          if (!Number.isNaN(num) && value !== "") {
-            startTransition(() => updatePriceAction(sizeId, packageId, num));
-          }
-        }}
-        className="w-28 rounded-md border border-neutral-200 bg-white py-1.5 pl-6 pr-2 text-right text-sm transition-colors hover:border-neutral-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-        style={{ opacity: isPending ? 0.5 : 1 }}
-      />
-    </div>
+    <CurrencyInput
+      value={value}
+      placeholder="—"
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => {
+        const num = Number(value);
+        if (!Number.isNaN(num) && value !== "") {
+          const rounded = Math.round(num * 100) / 100;
+          setValue(rounded.toFixed(2));
+          startTransition(() => updatePriceAction(sizeId, packageId, rounded));
+        }
+      }}
+      className="w-32"
+      style={{ opacity: isPending ? 0.5 : 1 }}
+    />
   );
 }
 
@@ -68,7 +63,7 @@ export function PriceMatrix({
               >
                 {pkg.name}
                 <span className="block text-[11px] font-normal text-neutral-400">
-                  Taban {pkg.base_page_count} sayfa
+                  Taban {pkg.base_page_count} sayfa · ek sayfa ₺{pkg.extra_page_price.toFixed(2)}
                 </span>
               </th>
             ))}
