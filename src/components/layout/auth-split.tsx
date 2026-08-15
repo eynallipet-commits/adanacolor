@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ShieldCheck, PercentCircle, Truck } from "lucide-react";
+import { Logo } from "@/components/layout/logo";
 
 const points = [
   { icon: ShieldCheck, text: "Güvenli, peşin ödeme altyapısı" },
@@ -14,8 +15,8 @@ export function AuthSplit({ children }: { children: React.ReactNode }) {
       <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-neutral-900 p-10 text-white lg:flex">
         <div className="bg-grid-pattern pointer-events-none absolute inset-0 opacity-[0.07]" />
         <div className="relative">
-          <Link href="/" className="font-display text-2xl font-bold">
-            Adana <span className="text-brand-400">Color</span>
+          <Link href="/" className="inline-flex items-center rounded-md bg-white px-3 py-2">
+            <Logo height={28} />
           </Link>
           <p className="mt-3 max-w-sm text-neutral-300">
             Fotoğrafçılar için B2B albüm, canvas ve baskı sipariş platformu.

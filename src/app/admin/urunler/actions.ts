@@ -17,18 +17,45 @@ export async function updatePriceAction(sizeId: string, packageTypeId: string, p
   revalidatePath("/admin/urunler");
 }
 
+async function replaceModelSizes(modelId: string, sizeIds: string[]) {
+  const supabase = await createClient();
+  await supabase.from("album_model_sizes").delete().eq("model_id", modelId);
+  if (sizeIds.length > 0) {
+    await supabase.from("album_model_sizes").insert(sizeIds.map((size_id) => ({ model_id: modelId, size_id })));
+  }
+}
+
+async function replaceModelColors(modelId: string, colorIds: string[]) {
+  const supabase = await createClient();
+  await supabase.from("album_model_colors").delete().eq("model_id", modelId);
+  if (colorIds.length > 0) {
+    await supabase.from("album_model_colors").insert(colorIds.map((color_id) => ({ model_id: modelId, color_id })));
+  }
+}
+
 export async function addGlobalAlbumModelAction(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireAdmin();
   const supabase = await createClient();
   const name = String(formData.get("name") || "").trim();
   if (!name) return { error: "Model adı gerekli." };
-  const { error } = await supabase.from("album_models").insert({
-    name,
-    image_url: String(formData.get("image_url") || "").trim() || null,
-    company_id: null,
-  });
-  if (error) return { error: error.message };
+  const { data, error } = await supabase
+    .from("album_models")
+    .insert({
+      name,
+      image_url: String(formData.get("image_url") || "").trim() || null,
+      company_id: null,
+    })
+    .select("id")
+    .single();
+  if (error || !data) return { error: error?.message ?? "Model oluşturulamadı." };
+
+  const sizeIds = formData.getAll("size_ids").map(String).filter(Boolean);
+  const colorIds = formData.getAll("color_ids").map(String).filter(Boolean);
+  await replaceModelSizes(data.id, sizeIds);
+  await replaceModelColors(data.id, colorIds);
+
   revalidatePath("/admin/urunler");
+  revalidatePath("/panel/siparis-olustur");
   return {};
 }
 
@@ -38,8 +65,11 @@ export async function addGlobalExtraProductAction(_prev: FormState, formData: Fo
   const name = String(formData.get("name") || "").trim();
   const price = Number(formData.get("price") || 0);
   const category = String(formData.get("category") || "print");
+  const imageUrl = String(formData.get("image_url") || "").trim() || null;
   if (!name || price <= 0) return { error: "Ürün adı ve fiyat gerekli." };
-  const { error } = await supabase.from("extra_products").insert({ name, price, category, company_id: null });
+  const { error } = await supabase
+    .from("extra_products")
+    .insert({ name, price, category, image_url: imageUrl, company_id: null });
   if (error) return { error: error.message };
   revalidatePath("/admin/urunler");
   return {};
@@ -57,6 +87,93 @@ export async function toggleGlobalExtraProductAction(id: string, active: boolean
   const supabase = await createClient();
   await supabase.from("extra_products").update({ active }).eq("id", id);
   revalidatePath("/admin/urunler");
+}
+
+export async function updateGlobalAlbumModelAction(
+  id: string,
+  input: { name: string; imageUrl: string | null; sizeIds: string[]; colorIds: string[] }
+): Promise<FormState> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const name = input.name.trim();
+  if (!name) return { error: "Model adı gerekli." };
+  const { error } = await supabase
+    .from("album_models")
+    .update({ name, image_url: input.imageUrl })
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  await replaceModelSizes(id, input.sizeIds);
+  await replaceModelColors(id, input.colorIds);
+
+  revalidatePath("/admin/urunler");
+  revalidatePath("/panel/siparis-olustur");
+  return {};
+}
+
+export async function addAlbumColorAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const code = String(formData.get("code") || "").trim();
+  if (!code) return { error: "Renk kodu gerekli." };
+  const { error } = await supabase.from("album_colors").insert({
+    code,
+    name: String(formData.get("name") || "").trim() || null,
+    hex: String(formData.get("hex") || "").trim() || null,
+    image_url: String(formData.get("image_url") || "").trim() || null,
+  });
+  if (error) {
+    return { error: error.code === "23505" ? "Bu renk kodu zaten kayıtlı." : error.message };
+  }
+  revalidatePath("/admin/urunler");
+  revalidatePath("/panel/siparis-olustur");
+  return {};
+}
+
+export async function updateAlbumColorAction(
+  id: string,
+  input: { code: string; name: string | null; hex: string | null; imageUrl: string | null }
+): Promise<FormState> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const code = input.code.trim();
+  if (!code) return { error: "Renk kodu gerekli." };
+  const { error } = await supabase
+    .from("album_colors")
+    .update({ code, name: input.name, hex: input.hex, image_url: input.imageUrl })
+    .eq("id", id);
+  if (error) {
+    return { error: error.code === "23505" ? "Bu renk kodu zaten kayıtlı." : error.message };
+  }
+  revalidatePath("/admin/urunler");
+  revalidatePath("/panel/siparis-olustur");
+  return {};
+}
+
+export async function deleteAlbumColorAction(id: string) {
+  await requireAdmin();
+  const supabase = await createClient();
+  await supabase.from("album_colors").delete().eq("id", id);
+  revalidatePath("/admin/urunler");
+  revalidatePath("/panel/siparis-olustur");
+}
+
+export async function updateGlobalExtraProductAction(
+  id: string,
+  input: { name: string; price: number; category: string; imageUrl: string | null }
+): Promise<FormState> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const name = input.name.trim();
+  if (!name || input.price <= 0) return { error: "Ürün adı ve fiyat gerekli." };
+  const { error } = await supabase
+    .from("extra_products")
+    .update({ name, price: input.price, category: input.category, image_url: input.imageUrl })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/urunler");
+  revalidatePath("/panel/siparis-olustur");
+  return {};
 }
 
 export async function updateDeliverySettingsAction(_prev: FormState, formData: FormData): Promise<FormState> {

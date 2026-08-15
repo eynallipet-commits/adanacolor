@@ -4,6 +4,7 @@ import { getOrderDetail } from "@/lib/orders";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatTL } from "@/lib/utils";
 import type { Company } from "@/lib/database.types";
+import { Logo } from "@/components/layout/logo";
 import { PrintBar } from "./print-bar";
 
 const SELLER = {
@@ -39,9 +40,7 @@ export default async function SiparisBelgesiPage({ params }: { params: Promise<{
       <div className="mx-auto max-w-3xl bg-white p-8 shadow-sm print:shadow-none sm:p-12">
         <div className="flex items-start justify-between border-b border-neutral-200 pb-6">
           <div>
-            <p className="font-display text-2xl font-bold text-neutral-900">
-              Adana <span className="text-brand-600">Color</span>
-            </p>
+            <Logo height={30} />
             <p className="mt-1 text-sm text-neutral-500">{SELLER.name}</p>
             <p className="text-sm text-neutral-500">{SELLER.address}</p>
           </div>
@@ -91,6 +90,7 @@ export default async function SiparisBelgesiPage({ params }: { params: Promise<{
                       {item.packageLabel} · {item.page_count} sayfa
                       {item.modelLabel ? ` · ${item.modelLabel}` : ""}
                       {item.cover_names_text ? ` · "${item.cover_names_text}"` : ""}
+                      {item.colorLabel ? ` · Renk ${item.colorLabel}` : ""}
                     </>
                   ) : (
                     "—"

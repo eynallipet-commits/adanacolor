@@ -4,18 +4,18 @@
   --background: #ffffff;
   --foreground: #171717;
 
-  /* Marka rengi: sıcak bordo/kırmızı (logo ile uyumlu) */
-  --color-brand-50: #fdf3f4;
-  --color-brand-100: #fbe4e7;
-  --color-brand-200: #f7ccd2;
-  --color-brand-300: #f0a4b0;
-  --color-brand-400: #e57286;
-  --color-brand-500: #d24a63;
-  --color-brand-600: #b52847;
-  --color-brand-700: #971e3c;
-  --color-brand-800: #7d1c35;
-  --color-brand-900: #6b1a31;
-  --color-brand-950: #3c0a17;
+  /* Marka rengi: logo kırmızısı */
+  --color-brand-50: #fdf2f2;
+  --color-brand-100: #fce2e1;
+  --color-brand-200: #f9c8c6;
+  --color-brand-300: #f3a09d;
+  --color-brand-400: #ea6d68;
+  --color-brand-500: #dc4440;
+  --color-brand-600: #c22b27;
+  --color-brand-700: #a3211e;
+  --color-brand-800: #861f1d;
+  --color-brand-900: #701f1d;
+  --color-brand-950: #3d0c0b;
 
   /* Vurgu: sıcak altın (premium hissi için) */
   --color-gold-400: #e0b15c;

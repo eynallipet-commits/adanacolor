@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
+import { TRLink } from "@/components/ui/table-row-link";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/lib/order-status";
 import type { Order } from "@/lib/database.types";
 import { cn, formatDate, formatTL } from "@/lib/utils";
@@ -52,7 +53,7 @@ export default async function SiparislerimPage() {
               </THead>
               <TBody>
                 {orders.map((o) => (
-                  <TR key={o.id}>
+                  <TRLink key={o.id} href={`/panel/siparisler/${o.id}`}>
                     <TD>
                       <Link href={`/panel/siparisler/${o.id}`} className="font-medium hover:underline">
                         {o.order_no}
@@ -64,7 +65,7 @@ export default async function SiparislerimPage() {
                     </TD>
                     <TD className="text-neutral-500">{o.tracking_number || "—"}</TD>
                     <TD className="text-right font-medium">{formatTL(o.total)}</TD>
-                  </TR>
+                  </TRLink>
                 ))}
               </TBody>
             </Table>

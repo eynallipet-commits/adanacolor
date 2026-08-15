@@ -162,6 +162,7 @@ export default async function SiparisDetayPage({ params }: { params: Promise<{ i
                         {item.modelLabel ? ` · ${item.modelLabel}` : ""}
                         {item.cover_names_text ? ` · "${item.cover_names_text}"` : ""}
                         {item.cover_date_text ? ` (${item.cover_date_text})` : ""}
+                        {item.colorLabel ? ` · Renk ${item.colorLabel}` : ""}
                       </>
                     ) : (
                       "—"

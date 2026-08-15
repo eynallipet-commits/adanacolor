@@ -5,7 +5,13 @@ import { requirePhotographer } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { calcAlbumUnitPrice, calcOrderTotals } from "@/lib/pricing";
 import { mockCharge, BANK_TRANSFER_INFO } from "@/lib/payments/mock";
-import type { AlbumSizePrice, PackageType } from "@/lib/database.types";
+import type {
+  AlbumColor,
+  AlbumModelColor,
+  AlbumModelSize,
+  AlbumSizePrice,
+  PackageType,
+} from "@/lib/database.types";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -19,6 +25,7 @@ interface AlbumCartItem {
   quantity: number;
   coverNamesText: string;
   coverDateText: string;
+  albumColorId: string | null;
 }
 
 interface ExtraCartItem {
@@ -58,14 +65,29 @@ export async function createOrderAction(
 
   const supabase = await createClient();
 
-  // Fiyatları client'tan asla güvenmeden, veritabanından yeniden hesapla.
+  // Fiyatları ve ürün kısıtlarını client'tan asla güvenmeden, veritabanından yeniden doğrula.
   const { data: prices } = await supabase.from("album_size_prices").select("*").returns<AlbumSizePrice[]>();
   const { data: packages } = await supabase.from("package_types").select("*").returns<PackageType[]>();
   const { data: extras } = await supabase.from("extra_products").select("*");
+  const { data: modelSizes } = await supabase.from("album_model_sizes").select("*").returns<AlbumModelSize[]>();
+  const { data: modelColors } = await supabase.from("album_model_colors").select("*").returns<AlbumModelColor[]>();
+  const { data: colors } = await supabase.from("album_colors").select("*").returns<AlbumColor[]>();
 
   const priceMap = new Map((prices ?? []).map((p) => [`${p.size_id}:${p.package_type_id}`, p.price]));
   const packageMap = new Map((packages ?? []).map((p) => [p.id, p]));
   const extraMap = new Map((extras ?? []).map((e) => [e.id, e]));
+  const colorMap = new Map((colors ?? []).map((c) => [c.id, c]));
+
+  const allowedSizesByModel = (modelSizes ?? []).reduce<Map<string, Set<string>>>((acc, row) => {
+    if (!acc.has(row.model_id)) acc.set(row.model_id, new Set());
+    acc.get(row.model_id)!.add(row.size_id);
+    return acc;
+  }, new Map());
+  const allowedColorsByModel = (modelColors ?? []).reduce<Map<string, Set<string>>>((acc, row) => {
+    if (!acc.has(row.model_id)) acc.set(row.model_id, new Set());
+    acc.get(row.model_id)!.add(row.color_id);
+    return acc;
+  }, new Map());
 
   type ResolvedLine = {
     id: string;
@@ -78,6 +100,8 @@ export async function createOrderAction(
     page_count: number | null;
     cover_names_text: string | null;
     cover_date_text: string | null;
+    album_color_id: string | null;
+    album_color_label: string | null;
     unit_price: number;
     line_total: number;
   };
@@ -92,6 +116,29 @@ export async function createOrderAction(
       if (!pkg || basePrice === undefined) {
         return { error: "Seçilen ebat/paket kombinasyonu geçersiz." };
       }
+
+      // Model ↔ ebat ve model ↔ renk kısıtlarını sunucuda doğrula.
+      const modelId = item.albumModelId || null;
+      let colorId: string | null = null;
+      let colorLabelText: string | null = null;
+
+      if (modelId) {
+        const allowedSizes = allowedSizesByModel.get(modelId);
+        if (allowedSizes && allowedSizes.size > 0 && !allowedSizes.has(item.sizeId)) {
+          return { error: "Seçilen kapak modeli bu ebatta basılamıyor. Lütfen sepeti güncelleyin." };
+        }
+
+        const allowedColors = allowedColorsByModel.get(modelId);
+        if (allowedColors && allowedColors.size > 0) {
+          if (!item.albumColorId || !allowedColors.has(item.albumColorId)) {
+            return { error: "Seçilen kapak modeli için geçerli bir renk seçmelisiniz." };
+          }
+          const color = colorMap.get(item.albumColorId);
+          colorId = item.albumColorId;
+          colorLabelText = color ? (color.name ? `${color.code} · ${color.name}` : color.code) : null;
+        }
+      }
+
       const quantity = Math.max(1, Math.floor(item.quantity));
       const pageCount = Math.max(pkg.base_page_count, Math.floor(item.pageCount));
       const unitPrice = calcAlbumUnitPrice(basePrice, pkg, pageCount);
@@ -100,12 +147,14 @@ export async function createOrderAction(
         item_type: "album",
         album_size_id: item.sizeId,
         package_type_id: item.packageTypeId,
-        album_model_id: item.albumModelId || null,
+        album_model_id: modelId,
         extra_product_id: null,
         quantity,
         page_count: pageCount,
         cover_names_text: item.coverNamesText || null,
         cover_date_text: item.coverDateText || null,
+        album_color_id: colorId,
+        album_color_label: colorLabelText,
         unit_price: unitPrice,
         line_total: Math.round(unitPrice * quantity * 100) / 100,
       });
@@ -126,6 +175,8 @@ export async function createOrderAction(
         page_count: null,
         cover_names_text: null,
         cover_date_text: null,
+        album_color_id: null,
+        album_color_label: null,
         unit_price: extra.price,
         line_total: Math.round(extra.price * quantity * 100) / 100,
       });

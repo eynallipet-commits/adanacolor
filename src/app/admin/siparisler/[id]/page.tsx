@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { OrderPhotos } from "@/components/order-photos";
+import { ColorSwatch } from "@/components/color-swatch";
 import { OrderStatusStepper } from "@/components/order-status-stepper";
 import { Badge } from "@/components/ui/badge";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
@@ -83,15 +84,24 @@ export default async function AdminSiparisDetayPage({ params }: { params: Promis
         <CardContent className="space-y-6">
           {items.map((item) => (
             <div key={item.id} className="border-t border-neutral-100 pt-4 first:border-0 first:pt-0">
-              <p className="mb-2 text-sm font-medium">
-                {item.item_type === "album" ? item.sizeLabel : item.extraLabel}
-                {item.item_type === "album" && item.packageLabel ? ` · ${item.packageLabel}` : ""}
-              </p>
+              <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
+                <span>
+                  {item.item_type === "album" ? item.sizeLabel : item.extraLabel}
+                  {item.item_type === "album" && item.packageLabel ? ` · ${item.packageLabel}` : ""}
+                  {item.modelLabel ? ` · ${item.modelLabel}` : ""}
+                </span>
+                {item.colorLabel && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2 py-0.5 text-xs">
+                    {item.color && <ColorSwatch color={item.color} className="h-4 w-5" />}
+                    Renk: {item.colorLabel}
+                  </span>
+                )}
+              </div>
               <OrderPhotos
                 companyId={order.company_id}
                 itemId={item.id}
                 requiredCount={getRequiredPhotoCount(item)}
-                canManage={true}
+                canManage={false}
               />
             </div>
           ))}
@@ -129,6 +139,12 @@ export default async function AdminSiparisDetayPage({ params }: { params: Promis
                         {item.modelLabel ? ` · ${item.modelLabel}` : ""}
                         {item.cover_names_text ? ` · "${item.cover_names_text}"` : ""}
                         {item.cover_date_text ? ` (${item.cover_date_text})` : ""}
+                        {item.colorLabel && (
+                          <span className="mt-1 flex items-center gap-1.5 font-medium text-neutral-800">
+                            {item.color && <ColorSwatch color={item.color} className="h-5 w-6" />}
+                            Renk: {item.colorLabel}
+                          </span>
+                        )}
                       </>
                     ) : (
                       "—"

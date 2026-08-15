@@ -27,12 +27,17 @@ export async function applyAction(_prevState: ApplyState, formData: FormData): P
   const address = String(formData.get("address") || "").trim() || null;
   const message = String(formData.get("message") || "").trim() || null;
   const kvkkConsent = formData.get("kvkk_consent") === "on";
+  const applicationId = String(formData.get("application_id") || "").trim();
+  const taxCertificatePath = String(formData.get("tax_certificate_path") || "").trim();
 
   if (!company_name || !contact_name || !email || !phone) {
     return { error: "Firma adı, yetkili adı, e-posta ve telefon zorunludur." };
   }
   if (!kvkkConsent) {
     return { error: "Devam etmek için KVKK Aydınlatma Metni'ni onaylamanız gerekiyor." };
+  }
+  if (!applicationId || !taxCertificatePath) {
+    return { error: "Devam etmek için vergi levhanızı yüklemeniz gerekiyor." };
   }
 
   const supabase = await createClient();
@@ -49,6 +54,7 @@ export async function applyAction(_prevState: ApplyState, formData: FormData): P
   }
 
   const { error } = await supabase.from("membership_applications").insert({
+    id: applicationId,
     company_name,
     contact_name,
     email,
@@ -58,6 +64,7 @@ export async function applyAction(_prevState: ApplyState, formData: FormData): P
     message,
     kvkk_consent: true,
     kvkk_consent_at: new Date().toISOString(),
+    tax_certificate_path: taxCertificatePath,
   });
 
   if (error) {

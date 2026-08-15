@@ -17,7 +17,15 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { BANK_TRANSFER_INFO } from "@/lib/payments/mock";
 import { OrderPhotos } from "@/components/order-photos";
-import type { AlbumModel, AlbumSize, AlbumSizePrice, ExtraProduct, PackageType } from "@/lib/database.types";
+import { ColorSwatch, colorLabel } from "@/components/color-swatch";
+import type {
+  AlbumColor,
+  AlbumModel,
+  AlbumSize,
+  AlbumSizePrice,
+  ExtraProduct,
+  PackageType,
+} from "@/lib/database.types";
 
 interface AlbumCartItem {
   id: string;
@@ -29,6 +37,8 @@ interface AlbumCartItem {
   quantity: number;
   coverNamesText: string;
   coverDateText: string;
+  albumColorId: string | null;
+  albumColorLabel: string | null;
   unitPrice: number;
   label: string;
 }
@@ -53,6 +63,7 @@ export interface InitialAlbumCartLine {
   quantity: number;
   coverNamesText: string;
   coverDateText: string;
+  albumColorId: string | null;
 }
 export interface InitialExtraCartLine {
   type: "extra";
@@ -69,6 +80,9 @@ export function OrderBuilder({
   prices,
   models,
   extras,
+  colors,
+  modelSizes,
+  modelColors,
   discountRate,
   companyId,
   initialCart = [],
@@ -78,10 +92,29 @@ export function OrderBuilder({
   prices: AlbumSizePrice[];
   models: AlbumModel[];
   extras: ExtraProduct[];
+  colors: AlbumColor[];
+  modelSizes: Record<string, string[]>;
+  modelColors: Record<string, string[]>;
   discountRate: number;
   companyId: string;
   initialCart?: InitialCartLine[];
 }) {
+  const colorMap = useMemo(() => new Map(colors.map((c) => [c.id, c])), [colors]);
+  const sizeCodeMap = useMemo(() => new Map(sizes.map((s) => [s.id, s.code])), [sizes]);
+  /** Model kartının altında gösterilen desteklenen ebat listesi. */
+  const modelSizeCodes = (modelId: string) => {
+    const ids = modelSizes[modelId];
+    if (!ids || ids.length === 0) return "Tüm ebatlar";
+    return ids
+      .map((id) => sizeCodeMap.get(id))
+      .filter(Boolean)
+      .join(", ");
+  };
+  /** Model seçili değilse ya da ebat tanımı yoksa tüm ebatlar açık kabul edilir. */
+  const sizeIdsForModel = (modelId: string) => {
+    const ids = modelId ? modelSizes[modelId] : undefined;
+    return ids && ids.length > 0 ? ids : null;
+  };
   const supabase = useMemo(() => createClient(), []);
   const priceMap = useMemo(() => new Map(prices.map((p) => [`${p.size_id}:${p.package_type_id}`, p.price])), [prices]);
 
@@ -93,6 +126,7 @@ export function OrderBuilder({
         if (!pkg || basePrice === undefined) return [];
         const size = sizes.find((s) => s.id === line.sizeId);
         const model = models.find((m) => m.id === line.albumModelId);
+        const color = line.albumColorId ? colors.find((c) => c.id === line.albumColorId) : undefined;
         return [
           {
             id: crypto.randomUUID(),
@@ -104,8 +138,12 @@ export function OrderBuilder({
             quantity: line.quantity,
             coverNamesText: line.coverNamesText,
             coverDateText: line.coverDateText,
+            albumColorId: color?.id ?? null,
+            albumColorLabel: color ? colorLabel(color) : null,
             unitPrice: calcAlbumUnitPrice(basePrice, pkg, line.pageCount),
-            label: `${size?.code ?? ""} · ${pkg.name} · ${line.pageCount} sayfa${model ? " · " + model.name : ""}`,
+            label: `${size?.code ?? ""} · ${pkg.name} · ${line.pageCount} sayfa${model ? " · " + model.name : ""}${
+              color ? " · Renk " + colorLabel(color) : ""
+            }`,
           },
         ];
       }
@@ -135,7 +173,14 @@ export function OrderBuilder({
       card.name.trim().length > 1);
 
   // Albüm ekleme formu state'i
-  const [sizeId, setSizeId] = useState(sizes[0]?.id ?? "");
+  // Başlangıç ebadı, varsayılan modelin basabildiği ebatlardan seçilmeli —
+  // aksi halde <select> ilk seçeneği gösterirken state başka bir ebatta kalır.
+  const defaultModelId = models[0]?.id ?? "";
+  const [sizeId, setSizeId] = useState(() => {
+    const ids = sizeIdsForModel(defaultModelId);
+    const usable = ids ? sizes.filter((s) => ids.includes(s.id)) : sizes;
+    return usable[0]?.id ?? sizes[0]?.id ?? "";
+  });
   const availablePackages = useMemo(
     () => packages.filter((pkg) => priceMap.has(`${sizeId}:${pkg.id}`)),
     [packages, priceMap, sizeId]
@@ -143,10 +188,28 @@ export function OrderBuilder({
   const [packageTypeId, setPackageTypeId] = useState(availablePackages[0]?.id ?? "");
   const selectedPackage = packages.find((p) => p.id === packageTypeId) ?? availablePackages[0];
   const [pageCount, setPageCount] = useState(selectedPackage?.base_page_count ?? 0);
-  const [albumModelId, setAlbumModelId] = useState<string>(models[0]?.id ?? "");
+  const [albumModelId, setAlbumModelId] = useState<string>(defaultModelId);
+  const [albumColorId, setAlbumColorId] = useState<string>("");
   const [quantity, setQuantity] = useState(1);
   const [coverNamesText, setCoverNamesText] = useState("");
   const [coverDateText, setCoverDateText] = useState("");
+
+  // Seçili modelin basılabildiği ebatlar
+  const allowedSizes = useMemo(() => {
+    const ids = sizeIdsForModel(albumModelId);
+    if (!ids) return sizes;
+    const set = new Set(ids);
+    return sizes.filter((s) => set.has(s.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sizeIdsForModel modelSizes'a bağlı, stabil
+  }, [albumModelId, modelSizes, sizes]);
+
+  // Seçili modelin sunduğu renkler
+  const availableColors = useMemo(() => {
+    const ids = albumModelId ? modelColors[albumModelId] : undefined;
+    if (!ids || ids.length === 0) return [];
+    const set = new Set(ids);
+    return colors.filter((c) => set.has(c.id));
+  }, [albumModelId, modelColors, colors]);
 
   // Ebat değişince paket seçimini geçerli aralığa taşı
   function handleSizeChange(newSizeId: string) {
@@ -156,6 +219,20 @@ export function OrderBuilder({
       setPackageTypeId(firstValid.id);
       setPageCount(firstValid.base_page_count);
     }
+  }
+
+  // Model değişince ebat ve rengi o modelin desteklediklerine sabitle
+  function handleModelChange(newModelId: string) {
+    setAlbumModelId(newModelId);
+
+    const ids = sizeIdsForModel(newModelId);
+    if (ids && !ids.includes(sizeId)) {
+      const firstAllowed = sizes.find((s) => ids.includes(s.id));
+      if (firstAllowed) handleSizeChange(firstAllowed.id);
+    }
+
+    const colorIds = newModelId ? modelColors[newModelId] : undefined;
+    if (!colorIds || !colorIds.includes(albumColorId)) setAlbumColorId("");
   }
 
   function handlePackageChange(newPackageId: string) {
@@ -170,10 +247,15 @@ export function OrderBuilder({
       ? calcAlbumUnitPrice(currentBasePrice, selectedPackage, pageCount)
       : 0;
 
+  const needsColor = availableColors.length > 0;
+  const canAddAlbum = !!selectedPackage && currentBasePrice !== undefined && (!needsColor || !!albumColorId);
+
   function addAlbumLine() {
     if (!selectedPackage || currentBasePrice === undefined) return;
+    if (needsColor && !albumColorId) return;
     const size = sizes.find((s) => s.id === sizeId);
     const model = models.find((m) => m.id === albumModelId);
+    const color = albumColorId ? colorMap.get(albumColorId) : undefined;
     setCart((c) => [
       ...c,
       {
@@ -186,8 +268,12 @@ export function OrderBuilder({
         quantity,
         coverNamesText,
         coverDateText,
+        albumColorId: color?.id ?? null,
+        albumColorLabel: color ? colorLabel(color) : null,
         unitPrice: currentUnitPrice,
-        label: `${size?.code ?? ""} · ${selectedPackage.name} · ${pageCount} sayfa${model ? " · " + model.name : ""}`,
+        label: `${size?.code ?? ""} · ${selectedPackage.name} · ${pageCount} sayfa${model ? " · " + model.name : ""}${
+          color ? " · Renk " + colorLabel(color) : ""
+        }`,
       },
     ]);
     setCoverNamesText("");
@@ -246,6 +332,7 @@ export function OrderBuilder({
             quantity: l.quantity,
             coverNamesText: l.coverNamesText,
             coverDateText: l.coverDateText,
+            albumColorId: l.albumColorId,
           }
         : { id: l.id, type: "extra", extraProductId: l.extraProductId, quantity: l.quantity }
     )
@@ -273,12 +360,17 @@ export function OrderBuilder({
               <div>
                 <Label>Ebat</Label>
                 <Select value={sizeId} onChange={(e) => handleSizeChange(e.target.value)}>
-                  {sizes.map((s) => (
+                  {allowedSizes.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.code}
                     </option>
                   ))}
                 </Select>
+                {allowedSizes.length < sizes.length && (
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Yalnızca seçili modelin basılabildiği ebatlar listelenir.
+                  </p>
+                )}
               </div>
               <div>
                 <Label>Paket</Label>
@@ -322,7 +414,7 @@ export function OrderBuilder({
                       <button
                         key={m.id}
                         type="button"
-                        onClick={() => setAlbumModelId(selected ? "" : m.id)}
+                        onClick={() => handleModelChange(selected ? "" : m.id)}
                         className={cn(
                           "group relative overflow-hidden rounded-lg border-2 text-left transition-colors",
                           selected ? "border-brand-600" : "border-transparent"
@@ -348,14 +440,17 @@ export function OrderBuilder({
                             </span>
                           )}
                         </div>
-                        <p
+                        <div
                           className={cn(
-                            "truncate px-1.5 py-1 text-center text-xs font-medium",
+                            "px-1.5 py-1 text-center",
                             selected ? "bg-brand-50 text-brand-700" : "bg-white text-neutral-600"
                           )}
                         >
-                          {m.name}
-                        </p>
+                          <p className="truncate text-xs font-medium">{m.name}</p>
+                          <p className="truncate text-[10px] text-neutral-400" title={modelSizeCodes(m.id)}>
+                            {modelSizeCodes(m.id)}
+                          </p>
+                        </div>
                       </button>
                     );
                   })}
@@ -364,6 +459,52 @@ export function OrderBuilder({
                   <p className="mt-1 text-xs text-neutral-500">Tanımlı kapak modeli yok.</p>
                 )}
               </div>
+
+              {needsColor && (
+                <div className="col-span-2">
+                  <Label>
+                    Kapak Rengi <span className="text-red-600">*</span>
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {availableColors.map((c) => {
+                      const selected = albumColorId === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setAlbumColorId(selected ? "" : c.id)}
+                          className={cn(
+                            "flex flex-col items-center gap-1 rounded-lg border-2 p-1 transition-colors",
+                            selected ? "border-brand-600 bg-brand-50" : "border-transparent hover:bg-neutral-50"
+                          )}
+                          title={colorLabel(c)}
+                          aria-pressed={selected}
+                        >
+                          <span className="relative">
+                            <ColorSwatch color={c} className="h-10 w-12" />
+                            {selected && (
+                              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-white">
+                                <Check className="h-2.5 w-2.5" />
+                              </span>
+                            )}
+                          </span>
+                          <span
+                            className={cn(
+                              "text-[10px] font-medium",
+                              selected ? "text-brand-700" : "text-neutral-500"
+                            )}
+                          >
+                            {c.code}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {!albumColorId && (
+                    <p className="mt-1 text-xs text-amber-700">Sepete eklemek için bir kapak rengi seçin.</p>
+                  )}
+                </div>
+              )}
               <div>
                 <Label>Kapak Yazısı (isimler)</Label>
                 <Input
@@ -385,7 +526,13 @@ export function OrderBuilder({
               <span className="text-sm text-neutral-600">Birim fiyat</span>
               <span className="font-semibold">{formatTL(currentUnitPrice)}</span>
             </div>
-            <Button type="button" variant="secondary" className="w-full" onClick={addAlbumLine}>
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full"
+              onClick={addAlbumLine}
+              disabled={!canAddAlbum}
+            >
               Sepete Ekle
             </Button>
           </CardContent>
@@ -399,26 +546,64 @@ export function OrderBuilder({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-2">
-                <Label>Ürün</Label>
-                <Select value={extraId} onChange={(e) => setExtraId(e.target.value)}>
-                  {extras.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {EXTRA_CATEGORY_LABELS[e.category] ?? e.category} · {e.name} — {formatTL(e.price)}
-                    </option>
-                  ))}
-                </Select>
+            <div>
+              <Label>Ürün</Label>
+              <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
+                {extras.map((e) => {
+                  const selected = extraId === e.id;
+                  return (
+                    <button
+                      key={e.id}
+                      type="button"
+                      onClick={() => setExtraId(e.id)}
+                      className={cn(
+                        "group relative overflow-hidden rounded-lg border-2 text-left transition-colors",
+                        selected ? "border-brand-600" : "border-transparent"
+                      )}
+                    >
+                      <div className="relative aspect-[4/3] w-full bg-neutral-100">
+                        {e.image_url ? (
+                          <Image
+                            src={e.image_url}
+                            alt={e.name}
+                            fill
+                            sizes="120px"
+                            className="object-cover transition-transform group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-neutral-300">
+                            <ImageOff className="h-5 w-5" />
+                          </div>
+                        )}
+                        {selected && (
+                          <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white">
+                            <Check className="h-3 w-3" />
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        className={cn(
+                          "px-1.5 py-1 text-center",
+                          selected ? "bg-brand-50 text-brand-700" : "bg-white text-neutral-600"
+                        )}
+                      >
+                        <p className="truncate text-xs font-medium">{e.name}</p>
+                        <p className="truncate text-[11px]">{formatTL(e.price)}</p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-              <div>
-                <Label>Adet</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={extraQty}
-                  onChange={(e) => setExtraQty(Math.max(1, Number(e.target.value)))}
-                />
-              </div>
+              {extras.length === 0 && <p className="mt-1 text-xs text-neutral-500">Tanımlı ekstra ürün yok.</p>}
+            </div>
+            <div>
+              <Label>Adet</Label>
+              <Input
+                type="number"
+                min={1}
+                value={extraQty}
+                onChange={(e) => setExtraQty(Math.max(1, Number(e.target.value)))}
+              />
             </div>
             <Button type="button" variant="secondary" className="w-full" onClick={addExtraLine}>
               Sepete Ekle

@@ -1,7 +1,10 @@
 import { requirePhotographer } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type {
+  AlbumColor,
   AlbumModel,
+  AlbumModelColor,
+  AlbumModelSize,
   AlbumSize,
   AlbumSizePrice,
   ExtraProduct,
@@ -9,6 +12,13 @@ import type {
   PackageType,
 } from "@/lib/database.types";
 import { OrderBuilder, type InitialCartLine } from "./order-builder";
+
+function groupBy(rows: { model_id: string }[], key: "size_id" | "color_id") {
+  return rows.reduce<Record<string, string[]>>((acc, row) => {
+    (acc[row.model_id] ??= []).push((row as unknown as Record<string, string>)[key]);
+    return acc;
+  }, {});
+}
 
 export default async function SiparisOlusturPage({
   searchParams,
@@ -19,18 +29,22 @@ export default async function SiparisOlusturPage({
   const { tekrar } = await searchParams;
   const supabase = await createClient();
 
-  const [sizesRes, packagesRes, pricesRes, modelsRes, extrasRes] = await Promise.all([
-    supabase.from("album_sizes").select("*").order("sort_order").returns<AlbumSize[]>(),
-    supabase.from("package_types").select("*").order("sort_order").returns<PackageType[]>(),
-    supabase.from("album_size_prices").select("*").returns<AlbumSizePrice[]>(),
-    supabase
-      .from("album_models")
-      .select("*")
-      .eq("active", true)
-      .order("sort_order")
-      .returns<AlbumModel[]>(),
-    supabase.from("extra_products").select("*").eq("active", true).order("sort_order").returns<ExtraProduct[]>(),
-  ]);
+  const [sizesRes, packagesRes, pricesRes, modelsRes, extrasRes, colorsRes, modelSizesRes, modelColorsRes] =
+    await Promise.all([
+      supabase.from("album_sizes").select("*").order("sort_order").returns<AlbumSize[]>(),
+      supabase.from("package_types").select("*").order("sort_order").returns<PackageType[]>(),
+      supabase.from("album_size_prices").select("*").returns<AlbumSizePrice[]>(),
+      supabase
+        .from("album_models")
+        .select("*")
+        .eq("active", true)
+        .order("sort_order")
+        .returns<AlbumModel[]>(),
+      supabase.from("extra_products").select("*").eq("active", true).order("sort_order").returns<ExtraProduct[]>(),
+      supabase.from("album_colors").select("*").eq("active", true).order("sort_order").returns<AlbumColor[]>(),
+      supabase.from("album_model_sizes").select("*").returns<AlbumModelSize[]>(),
+      supabase.from("album_model_colors").select("*").returns<AlbumModelColor[]>(),
+    ]);
 
   let initialCart: InitialCartLine[] = [];
   if (tekrar) {
@@ -52,6 +66,7 @@ export default async function SiparisOlusturPage({
               quantity: item.quantity,
               coverNamesText: item.cover_names_text ?? "",
               coverDateText: item.cover_date_text ?? "",
+              albumColorId: item.album_color_id,
             }
           : { type: "extra", extraProductId: item.extra_product_id!, quantity: item.quantity }
       );
@@ -72,6 +87,9 @@ export default async function SiparisOlusturPage({
         prices={pricesRes.data ?? []}
         models={modelsRes.data ?? []}
         extras={extrasRes.data ?? []}
+        colors={colorsRes.data ?? []}
+        modelSizes={groupBy(modelSizesRes.data ?? [], "size_id")}
+        modelColors={groupBy(modelColorsRes.data ?? [], "color_id")}
         discountRate={company?.discount_rate ?? 0}
         companyId={profile.company_id}
         initialCart={initialCart}

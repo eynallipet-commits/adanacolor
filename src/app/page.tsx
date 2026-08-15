@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Logo } from "@/components/layout/logo";
+import { InstagramSection } from "@/components/instagram-section";
 import { cn } from "@/lib/utils";
 
 const trustPoints = [
@@ -76,14 +78,12 @@ const albumModels = [
   { name: "Loft", image: "/albums/loft.jpg" },
 ];
 
-export default function Home() {
+export default async function Home() {
   return (
     <main className="flex-1 bg-white">
       <header className="sticky top-0 z-30 border-b border-neutral-200/80 bg-white/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <span className="font-display text-xl font-bold tracking-tight text-neutral-900">
-            Adana <span className="text-brand-600">Color</span>
-          </span>
+          <Logo height={34} />
           <nav className="flex items-center gap-2 sm:gap-4">
             <Link
               href="/basvuru"
@@ -225,6 +225,8 @@ export default function Home() {
         </div>
       </section>
 
+      <InstagramSection />
+
       {/* CTA */}
       <section className="border-t border-neutral-200 bg-neutral-900">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 py-16 text-center sm:px-6">
@@ -250,9 +252,7 @@ export default function Home() {
 
       <footer className="border-t border-neutral-200 bg-white py-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-sm text-neutral-500 sm:flex-row sm:px-6">
-          <span className="font-display text-base font-semibold text-neutral-900">
-            Adana <span className="text-brand-600">Color</span>
-          </span>
+          <Logo height={24} />
           <p>© {new Date().getFullYear()} Adana Color Foto Albüm. Tüm hakları saklıdır.</p>
           <div className="flex gap-4">
             <Link href="/basvuru" className="hover:text-neutral-900">

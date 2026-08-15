@@ -50,6 +50,18 @@ export interface MembershipApplication {
   reviewed_by: string | null;
   reviewed_at: string | null;
   created_company_id: string | null;
+  tax_certificate_path: string | null;
+  kvkk_consent: boolean;
+  kvkk_consent_at: string | null;
+  created_at: string;
+}
+
+export interface InstagramPost {
+  id: string;
+  image_path: string;
+  caption: string | null;
+  permalink: string | null;
+  sort_order: number;
   created_at: string;
 }
 
@@ -77,6 +89,27 @@ export interface AlbumSizePrice {
   price: number;
 }
 
+export interface AlbumColor {
+  id: string;
+  code: string;
+  name: string | null;
+  hex: string | null;
+  image_url: string | null;
+  active: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface AlbumModelSize {
+  model_id: string;
+  size_id: string;
+}
+
+export interface AlbumModelColor {
+  model_id: string;
+  color_id: string;
+}
+
 export interface AlbumModel {
   id: string;
   name: string;
@@ -92,6 +125,7 @@ export interface ExtraProduct {
   category: ExtraCategory;
   name: string;
   price: number;
+  image_url: string | null;
   company_id: string | null;
   active: boolean;
   sort_order: number;
@@ -129,6 +163,8 @@ export interface OrderItem {
   page_count: number | null;
   cover_names_text: string | null;
   cover_date_text: string | null;
+  album_color_id: string | null;
+  album_color_label: string | null;
   unit_price: number;
   line_total: number;
   notes: string | null;

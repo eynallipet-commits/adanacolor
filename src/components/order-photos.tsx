@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Download } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ALLOWED_PHOTO_TYPES, MAX_PHOTO_SIZE_BYTES, ORDER_PHOTOS_BUCKET, formatBytes } from "@/lib/storage";
 import { cn, formatDate } from "@/lib/utils";
@@ -11,7 +12,22 @@ interface StoredFile {
   size: number;
   createdAt: string;
   url: string | null;
+  downloadUrl: string | null;
   isImage: boolean;
+}
+
+async function downloadSequentially(files: { downloadUrl: string | null; name: string }[]) {
+  for (const f of files) {
+    if (!f.downloadUrl) continue;
+    const a = document.createElement("a");
+    a.href = f.downloadUrl;
+    a.download = f.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // Tarayıcıların ardışık indirmeleri engellememesi için kısa bir bekleme.
+    await new Promise((resolve) => setTimeout(resolve, 400));
+  }
 }
 
 export function OrderPhotos({
@@ -30,6 +46,7 @@ export function OrderPhotos({
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
+  const [downloadingAll, setDownloadingAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -50,14 +67,18 @@ export function OrderPhotos({
       entries.map(async (f) => {
         const path = `${folder}/${f.name}`;
         const isImage = /\.(jpe?g|png|webp|gif|heic)$/i.test(f.name);
-        const { data: signed } = await supabase.storage.from(ORDER_PHOTOS_BUCKET).createSignedUrl(path, 3600);
-        const url = signed?.signedUrl ?? null;
+        const displayName = f.name.replace(/^[0-9a-f-]{36}-/i, "");
+        const [{ data: signed }, { data: signedDownload }] = await Promise.all([
+          supabase.storage.from(ORDER_PHOTOS_BUCKET).createSignedUrl(path, 3600),
+          supabase.storage.from(ORDER_PHOTOS_BUCKET).createSignedUrl(path, 3600, { download: displayName }),
+        ]);
         return {
-          name: f.name.replace(/^[0-9a-f-]{36}-/i, ""),
+          name: displayName,
           path,
           size: f.metadata?.size ?? 0,
           createdAt: f.created_at ?? "",
-          url,
+          url: signed?.signedUrl ?? null,
+          downloadUrl: signedDownload?.signedUrl ?? null,
           isImage,
         };
       })
@@ -115,27 +136,46 @@ export function OrderPhotos({
     await loadFiles();
   }
 
+  async function handleDownloadAll() {
+    setDownloadingAll(true);
+    await downloadSequentially(files);
+    setDownloadingAll(false);
+  }
+
   const uploadedCount = files.length;
   const complete = requiredCount > 0 && uploadedCount >= requiredCount;
   const remaining = Math.max(0, requiredCount - uploadedCount);
 
   return (
     <div className="space-y-3">
-      {requiredCount > 0 && (
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-              complete ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {requiredCount > 0 && (
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                complete ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+              )}
+            >
+              {uploadedCount} / {requiredCount} fotoğraf yüklendi
+            </span>
+            {!complete && canManage && (
+              <span className="text-xs text-neutral-500">{remaining} fotoğraf daha gerekiyor</span>
             )}
+          </div>
+        )}
+        {files.length > 0 && (
+          <button
+            type="button"
+            onClick={handleDownloadAll}
+            disabled={downloadingAll}
+            className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
           >
-            {uploadedCount} / {requiredCount} fotoğraf yüklendi
-          </span>
-          {!complete && canManage && (
-            <span className="text-xs text-neutral-500">{remaining} fotoğraf daha gerekiyor</span>
-          )}
-        </div>
-      )}
+            <Download className="h-3.5 w-3.5" />
+            {downloadingAll ? "İndiriliyor..." : `Tümünü İndir (${files.length})`}
+          </button>
+        )}
+      </div>
 
       {canManage && (
         <div>
@@ -191,15 +231,27 @@ export function OrderPhotos({
                 <p className="text-[11px] text-neutral-500">
                   {formatBytes(f.size)} · {f.createdAt ? formatDate(f.createdAt) : ""}
                 </p>
-                {canManage && (
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(f.path)}
-                    className="mt-1 text-[11px] text-red-600 hover:underline"
-                  >
-                    Sil
-                  </button>
-                )}
+                <div className="mt-1 flex items-center gap-2">
+                  {f.downloadUrl && (
+                    <a
+                      href={f.downloadUrl}
+                      download={f.name}
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-brand-700 hover:underline"
+                    >
+                      <Download className="h-3 w-3" />
+                      İndir
+                    </a>
+                  )}
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(f.path)}
+                      className="text-[11px] text-red-600 hover:underline"
+                    >
+                      Sil
+                    </button>
+                  )}
+                </div>
               </div>
             </li>
           ))}

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
+import { TRLink } from "@/components/ui/table-row-link";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/lib/order-status";
 import type { Company, Order, OrderStatus } from "@/lib/database.types";
 import { cn, formatDate, formatTL } from "@/lib/utils";
@@ -129,7 +130,7 @@ export default async function AdminSiparislerPage({
               </THead>
               <TBody>
                 {orders.map((o) => (
-                  <TR key={o.id}>
+                  <TRLink key={o.id} href={`/admin/siparisler/${o.id}`}>
                     <TD>
                       <Link href={`/admin/siparisler/${o.id}`} className="font-medium hover:underline">
                         {o.order_no}
@@ -141,7 +142,7 @@ export default async function AdminSiparislerPage({
                       <Badge className={ORDER_STATUS_COLORS[o.status]}>{ORDER_STATUS_LABELS[o.status]}</Badge>
                     </TD>
                     <TD className="text-right font-medium">{formatTL(o.total)}</TD>
-                  </TR>
+                  </TRLink>
                 ))}
               </TBody>
             </Table>

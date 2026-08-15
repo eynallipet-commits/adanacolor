@@ -2,6 +2,14 @@ export const ORDER_PHOTOS_BUCKET = "order-photos";
 export const MAX_PHOTO_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
 export const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf"];
 
+export const MEMBERSHIP_DOCUMENTS_BUCKET = "membership-documents";
+export const MAX_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+export const ALLOWED_DOCUMENT_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+
+export const SITE_ASSETS_BUCKET = "site-assets";
+export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
 export function isEditableOrderStatus(status: string) {
   return status !== "delivered" && status !== "cancelled";
 }

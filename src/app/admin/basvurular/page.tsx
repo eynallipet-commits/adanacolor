@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { FileCheck2 } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -48,7 +49,9 @@ export default async function BasvurularPage() {
               <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold">{app.company_name}</p>
+                    <Link href={`/admin/basvurular/${app.id}`} className="font-semibold hover:underline">
+                      {app.company_name}
+                    </Link>
                     <Badge className={STATUS_COLORS[app.status]}>{STATUS_LABELS[app.status]}</Badge>
                   </div>
                   <p className="mt-1 text-sm text-neutral-600">
@@ -58,6 +61,12 @@ export default async function BasvurularPage() {
                   {app.address && <p className="text-sm text-neutral-500">{app.address}</p>}
                   {app.message && <p className="mt-2 text-sm italic text-neutral-500">&quot;{app.message}&quot;</p>}
                   <p className="mt-2 text-xs text-neutral-400">{formatDate(app.created_at)}</p>
+                  <Link
+                    href={`/admin/basvurular/${app.id}`}
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline"
+                  >
+                    Detayları Gör (vergi levhası dahil)
+                  </Link>
                 </div>
                 <div className="shrink-0 sm:w-64">
                   <ApplicationActions applicationId={app.id} email={app.email} status={app.status} />

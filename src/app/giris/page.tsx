@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/layout/logo";
 import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AuthSplit } from "@/components/layout/auth-split";
@@ -9,8 +10,8 @@ export default function GirisPage() {
     <AuthSplit>
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center lg:hidden">
-          <Link href="/" className="font-display text-xl font-bold tracking-tight">
-            Adana <span className="text-brand-600">Color</span>
+          <Link href="/" className="font-display flex items-center justify-center gap-2 text-xl font-bold tracking-tight">
+            <Logo height={28} />
           </Link>
         </div>
         <div>
