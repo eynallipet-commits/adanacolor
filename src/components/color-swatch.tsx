@@ -6,9 +6,14 @@ import type { AlbumColor } from "@/lib/database.types";
 export function ColorSwatch({
   color,
   className,
+  sizes = "96px",
+  quality = 90,
 }: {
   color: Pick<AlbumColor, "code" | "name" | "hex" | "image_url">;
   className?: string;
+  /** Görselin gerçek yerleşim genişliğine göre ayarlayın — küçük bırakılırsa bulanık çıkar. */
+  sizes?: string;
+  quality?: number;
 }) {
   return (
     <span
@@ -17,7 +22,7 @@ export function ColorSwatch({
       title={color.name ? `${color.code} · ${color.name}` : color.code}
     >
       {color.image_url && (
-        <Image src={color.image_url} alt={color.code} fill sizes="64px" className="object-cover" />
+        <Image src={color.image_url} alt={color.code} fill sizes={sizes} quality={quality} className="object-cover" />
       )}
     </span>
   );

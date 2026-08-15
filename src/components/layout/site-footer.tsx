@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Phone, Mail, Clock, ExternalLink, ShieldCheck } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, ExternalLink, ShieldCheck, MessageCircle } from "lucide-react";
 import { Logo } from "@/components/layout/logo";
 import { InstagramIcon } from "@/components/icons/instagram-icon";
 import { COMPANY, formatAddress, mapsEmbedUrl, mapsDirectionsUrl } from "@/lib/company";
@@ -99,6 +99,18 @@ export function SiteFooter() {
                 <ContactRow icon={<Phone className="h-4 w-4" />}>
                   <a href={`tel:${COMPANY.phone.replace(/\s/g, "")}`} className="hover:text-white">
                     {COMPANY.phone}
+                  </a>
+                </ContactRow>
+              )}
+              {COMPANY.whatsapp && (
+                <ContactRow icon={<MessageCircle className="h-4 w-4" />}>
+                  <a
+                    href={`https://wa.me/${COMPANY.whatsapp.replace(/\D/g, "")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:text-white"
+                  >
+                    WhatsApp Hattı
                   </a>
                 </ContactRow>
               )}

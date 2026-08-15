@@ -28,19 +28,19 @@ export const COMPANY: CompanyInfo = {
   tagline: "Fotoğrafçılar için albüm, canvas ve baskı üretimi",
 
   /** Açık adres (mahalle/cadde/no). Boşsa footer'da yalnızca şehir görünür. */
-  addressLine: "",
+  addressLine: "A, Yeşiloba Mahallesi, 46069. Sokak No:10, 01210 Seyhan/Adana",
   district: "",
   city: "Adana",
   country: "Türkiye",
 
   /** Telefon/e-posta boşsa o satır footer'da görünmez. */
-  phone: "",
+  phone: "03224289299",
   /** Sadece rakam, ülke koduyla: 905xxxxxxxxx */
-  whatsapp: "",
+  whatsapp: "wa.me/905072138340",
   email: "",
 
   /** Örn: ["Pazartesi - Cuma: 09:00 - 18:00", "Cumartesi: 09:00 - 14:00"] */
-  workingHours: [],
+  workingHours: ["Pazartesi - Cumartesi: 08:00 - 18:00", "Pazar: Kapalı"],
 
   instagram: "https://www.instagram.com/adanacoloralbum/",
 

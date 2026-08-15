@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useActionState } from "react";
 import Image from "next/image";
-import { CreditCard, Landmark, Check, ImageOff, ShoppingCart, Images, Lock, RotateCcw, Maximize2, X } from "lucide-react";
+import { CreditCard, Landmark, Check, ImageOff, ShoppingCart, Images, Lock, RotateCcw, Maximize2 } from "lucide-react";
 import { createOrderAction, type CreateOrderState } from "./actions";
 import { calcAlbumUnitPrice, calcOrderTotals } from "@/lib/pricing";
 import { formatTL, cn } from "@/lib/utils";
@@ -18,14 +18,18 @@ import { Select } from "@/components/ui/select";
 import { BANK_TRANSFER_INFO } from "@/lib/payments/mock";
 import { OrderPhotos } from "@/components/order-photos";
 import { ColorSwatch, colorLabel } from "@/components/color-swatch";
+import { ImagePreviewModal } from "@/components/image-preview-modal";
 import type {
   AlbumColor,
   AlbumModel,
   AlbumSize,
   AlbumSizePrice,
+  ExtraCategory,
   ExtraProduct,
   PackageType,
 } from "@/lib/database.types";
+
+const EXTRA_CATEGORY_ORDER: ExtraCategory[] = ["canvas", "print", "box"];
 
 interface AlbumCartItem {
   id: string;
@@ -191,6 +195,8 @@ export function OrderBuilder({
   const [albumModelId, setAlbumModelId] = useState<string>(defaultModelId);
   const [albumColorId, setAlbumColorId] = useState<string>("");
   const [previewModel, setPreviewModel] = useState<AlbumModel | null>(null);
+  const [previewColor, setPreviewColor] = useState<AlbumColor | null>(null);
+  const [previewExtra, setPreviewExtra] = useState<ExtraProduct | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [coverNamesText, setCoverNamesText] = useState("");
   const [coverDateText, setCoverDateText] = useState("");
@@ -282,9 +288,31 @@ export function OrderBuilder({
     setQuantity(1);
   }
 
-  // Ekstra ürün ekleme formu state'i
-  const [extraId, setExtraId] = useState(extras[0]?.id ?? "");
+  // Ekstra ürün ekleme formu state'i: önce kategori (Canvas / Foto Büyütme / Kutu),
+  // sonra o kategorideki ürünler arasından boyut seçilir.
+  const extrasByCategory = useMemo(() => {
+    const map = new Map<ExtraCategory, ExtraProduct[]>();
+    for (const e of extras) {
+      const list = map.get(e.category) ?? [];
+      list.push(e);
+      map.set(e.category, list);
+    }
+    return map;
+  }, [extras]);
+  const availableCategories = EXTRA_CATEGORY_ORDER.filter((c) => (extrasByCategory.get(c)?.length ?? 0) > 0);
+
+  const [extraCategory, setExtraCategory] = useState<ExtraCategory | "">(availableCategories[0] ?? "");
+  const [extraId, setExtraId] = useState(extrasByCategory.get(availableCategories[0])?.[0]?.id ?? "");
   const [extraQty, setExtraQty] = useState(1);
+
+  const categoryExtras = extraCategory ? (extrasByCategory.get(extraCategory) ?? []) : [];
+  const selectedExtra = categoryExtras.find((e) => e.id === extraId) ?? categoryExtras[0];
+
+  function handleExtraCategoryChange(category: ExtraCategory) {
+    setExtraCategory(category);
+    const first = extrasByCategory.get(category)?.[0];
+    setExtraId(first?.id ?? "");
+  }
 
   function addExtraLine() {
     const extra = extras.find((e) => e.id === extraId);
@@ -482,38 +510,50 @@ export function OrderBuilder({
                   <Label>
                     Kapak Rengi <span className="text-red-600">*</span>
                   </Label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2.5">
                     {availableColors.map((c) => {
                       const selected = albumColorId === c.id;
                       return (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => setAlbumColorId(selected ? "" : c.id)}
-                          className={cn(
-                            "flex flex-col items-center gap-1 rounded-lg border-2 p-1 transition-colors",
-                            selected ? "border-brand-600 bg-brand-50" : "border-transparent hover:bg-neutral-50"
-                          )}
-                          title={colorLabel(c)}
-                          aria-pressed={selected}
-                        >
-                          <span className="relative">
-                            <ColorSwatch color={c} className="h-10 w-12" />
-                            {selected && (
-                              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-white">
-                                <Check className="h-2.5 w-2.5" />
-                              </span>
-                            )}
-                          </span>
-                          <span
+                        <div key={c.id} className="group relative">
+                          <button
+                            type="button"
+                            onClick={() => setAlbumColorId(selected ? "" : c.id)}
                             className={cn(
-                              "text-[10px] font-medium",
-                              selected ? "text-brand-700" : "text-neutral-500"
+                              "flex flex-col items-center gap-1 rounded-lg border-2 p-1 transition-colors",
+                              selected ? "border-brand-600 bg-brand-50" : "border-transparent hover:bg-neutral-50"
                             )}
+                            title={colorLabel(c)}
+                            aria-pressed={selected}
                           >
-                            {c.code}
-                          </span>
-                        </button>
+                            <span className="relative">
+                              <ColorSwatch color={c} className="h-16 w-20" sizes="80px" />
+                              {selected && (
+                                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-white">
+                                  <Check className="h-2.5 w-2.5" />
+                                </span>
+                              )}
+                            </span>
+                            <span
+                              className={cn(
+                                "text-[10px] font-medium",
+                                selected ? "text-brand-700" : "text-neutral-500"
+                              )}
+                            >
+                              {c.code}
+                            </span>
+                          </button>
+                          {c.image_url && (
+                            <button
+                              type="button"
+                              onClick={() => setPreviewColor(c)}
+                              title="Büyüt"
+                              aria-label={`${colorLabel(c)} rengini büyüt`}
+                              className="absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/45 text-white transition-opacity hover:bg-black/70 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                            >
+                              <Maximize2 className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
@@ -564,67 +604,116 @@ export function OrderBuilder({
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label>Ürün</Label>
-              <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
-                {extras.map((e) => {
-                  const selected = extraId === e.id;
+              <Label>Ürün Grubu</Label>
+              <div className="grid grid-cols-3 gap-2.5">
+                {availableCategories.map((category) => {
+                  const selected = extraCategory === category;
+                  const representative = extrasByCategory.get(category)?.[0];
                   return (
                     <button
-                      key={e.id}
+                      key={category}
                       type="button"
-                      onClick={() => setExtraId(e.id)}
+                      onClick={() => handleExtraCategoryChange(category)}
                       className={cn(
-                        "group relative overflow-hidden rounded-lg border-2 text-left transition-colors",
-                        selected ? "border-brand-600" : "border-transparent"
+                        "overflow-hidden rounded-xl border-2 text-left transition-colors",
+                        selected ? "border-brand-600 shadow-sm" : "border-neutral-200 hover:border-neutral-300"
                       )}
                     >
-                      <div className="relative aspect-[4/3] w-full bg-neutral-100">
-                        {e.image_url ? (
+                      <div className="relative aspect-[4/3] w-full bg-neutral-50">
+                        {representative?.image_url ? (
                           <Image
-                            src={e.image_url}
-                            alt={e.name}
+                            src={representative.image_url}
+                            alt={EXTRA_CATEGORY_LABELS[category] ?? category}
                             fill
-                            sizes="120px"
-                            className="object-cover transition-transform group-hover:scale-105"
+                            sizes="(min-width: 1024px) 220px, 33vw"
+                            quality={90}
+                            className="object-cover"
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center text-neutral-300">
-                            <ImageOff className="h-5 w-5" />
+                            <ImageOff className="h-6 w-6" />
                           </div>
-                        )}
-                        {selected && (
-                          <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white">
-                            <Check className="h-3 w-3" />
-                          </span>
                         )}
                       </div>
                       <div
                         className={cn(
-                          "px-1.5 py-1 text-center",
-                          selected ? "bg-brand-50 text-brand-700" : "bg-white text-neutral-600"
+                          "px-2 py-1.5 text-center",
+                          selected ? "bg-brand-50 text-brand-700" : "bg-white text-neutral-700"
                         )}
                       >
-                        <p className="truncate text-xs font-medium">{e.name}</p>
-                        <p className="truncate text-[11px]">{formatTL(e.price)}</p>
+                        <p className="text-sm font-medium">{EXTRA_CATEGORY_LABELS[category] ?? category}</p>
+                        <p className="text-[11px] text-neutral-400">{extrasByCategory.get(category)?.length} boy</p>
                       </div>
                     </button>
                   );
                 })}
               </div>
-              {extras.length === 0 && <p className="mt-1 text-xs text-neutral-500">Tanımlı ekstra ürün yok.</p>}
+              {availableCategories.length === 0 && (
+                <p className="mt-1 text-xs text-neutral-500">Tanımlı ekstra ürün yok.</p>
+              )}
             </div>
-            <div>
-              <Label>Adet</Label>
-              <Input
-                type="number"
-                min={1}
-                value={extraQty}
-                onChange={(e) => setExtraQty(Math.max(1, Number(e.target.value)))}
-              />
-            </div>
-            <Button type="button" variant="secondary" className="w-full" onClick={addExtraLine}>
-              Sepete Ekle
-            </Button>
+
+            {selectedExtra && (
+              <div className="space-y-3 rounded-lg border border-neutral-200 p-3">
+                <div className="group relative aspect-[16/10] w-full overflow-hidden rounded-md bg-neutral-50">
+                  {selectedExtra.image_url ? (
+                    <Image
+                      src={selectedExtra.image_url}
+                      alt={selectedExtra.name}
+                      fill
+                      sizes="(min-width: 1024px) 480px, 90vw"
+                      quality={90}
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-neutral-300">
+                      <ImageOff className="h-8 w-8" />
+                    </div>
+                  )}
+                  {selectedExtra.image_url && (
+                    <button
+                      type="button"
+                      onClick={() => setPreviewExtra(selectedExtra)}
+                      title="Büyüt"
+                      aria-label={`${selectedExtra.name} görselini büyüt`}
+                      className="absolute left-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white transition-opacity hover:bg-black/70 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                    >
+                      <Maximize2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
+                <div>
+                  <Label>Boyut</Label>
+                  <Select value={extraId} onChange={(e) => setExtraId(e.target.value)}>
+                    {categoryExtras.map((e) => (
+                      <option key={e.id} value={e.id}>
+                        {e.name} — {formatTL(e.price)}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+
+                <div className="flex items-center justify-between rounded-md bg-neutral-50 px-3 py-2">
+                  <span className="text-sm text-neutral-600">Birim fiyat</span>
+                  <span className="font-semibold">{formatTL(selectedExtra.price)}</span>
+                </div>
+
+                <div>
+                  <Label>Adet</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={extraQty}
+                    onChange={(e) => setExtraQty(Math.max(1, Number(e.target.value)))}
+                  />
+                </div>
+
+                <Button type="button" variant="secondary" className="w-full" onClick={addExtraLine}>
+                  Sepete Ekle
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -834,58 +923,50 @@ export function OrderBuilder({
       </div>
       </div>
 
-      {/* Kapak modeli büyük önizleme */}
       {previewModel?.image_url && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${previewModel.name} önizleme`}
-          onClick={() => setPreviewModel(null)}
-        >
-          <div
-            className="relative w-full max-w-4xl overflow-hidden rounded-xl bg-white shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="relative aspect-[3/2] w-full bg-neutral-50">
-              <Image
-                src={previewModel.image_url}
-                alt={`${previewModel.name} albüm kapak modeli`}
-                fill
-                sizes="(min-width: 1024px) 896px, 100vw"
-                quality={95}
-                className="object-contain"
-                priority
-              />
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 px-4 py-3">
-              <div className="min-w-0">
-                <p className="font-display text-lg font-bold text-neutral-900">{previewModel.name}</p>
-                <p className="truncate text-xs text-neutral-500">
-                  Basılabilen ebatlar: {modelSizeCodes(previewModel.id)}
-                </p>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => {
-                  handleModelChange(previewModel.id);
-                  setPreviewModel(null);
-                }}
-              >
-                Bu Modeli Seç
-              </Button>
-            </div>
-            <button
-              type="button"
-              onClick={() => setPreviewModel(null)}
-              aria-label="Kapat"
-              className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
-            >
-              <X className="h-4.5 w-4.5" />
-            </button>
-          </div>
-        </div>
+        <ImagePreviewModal
+          imageUrl={previewModel.image_url}
+          alt={`${previewModel.name} albüm kapak modeli`}
+          title={previewModel.name}
+          subtitle={`Basılabilen ebatlar: ${modelSizeCodes(previewModel.id)}`}
+          actionLabel="Bu Modeli Seç"
+          onAction={() => {
+            handleModelChange(previewModel.id);
+            setPreviewModel(null);
+          }}
+          onClose={() => setPreviewModel(null)}
+        />
+      )}
+
+      {previewColor?.image_url && (
+        <ImagePreviewModal
+          imageUrl={previewColor.image_url}
+          alt={`${colorLabel(previewColor)} kapak rengi`}
+          title={colorLabel(previewColor)}
+          subtitle="Kumaş/deri kartelası"
+          actionLabel="Bu Rengi Seç"
+          onAction={() => {
+            setAlbumColorId(previewColor.id);
+            setPreviewColor(null);
+          }}
+          onClose={() => setPreviewColor(null)}
+        />
+      )}
+
+      {previewExtra?.image_url && (
+        <ImagePreviewModal
+          imageUrl={previewExtra.image_url}
+          alt={previewExtra.name}
+          title={previewExtra.name}
+          subtitle={formatTL(previewExtra.price)}
+          actionLabel="Bu Boyutu Seç"
+          onAction={() => {
+            setExtraCategory(previewExtra.category);
+            setExtraId(previewExtra.id);
+            setPreviewExtra(null);
+          }}
+          onClose={() => setPreviewExtra(null)}
+        />
       )}
     </div>
   );
