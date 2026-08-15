@@ -18,10 +18,3 @@ export async function mockCharge({ orderId }: MockChargeInput): Promise<MockChar
   const reference = `MOCK-${orderId.slice(0, 8).toUpperCase()}-${Date.now()}`;
   return { success: true, reference };
 }
-
-export const BANK_TRANSFER_INFO = {
-  bankName: "Ziraat Bankası",
-  accountName: "Adana Color Foto Albüm San. Tic. Ltd. Şti.",
-  iban: "TR00 0000 0000 0000 0000 0000 00",
-  note: "Açıklamaya sipariş numaranızı yazınız.",
-};

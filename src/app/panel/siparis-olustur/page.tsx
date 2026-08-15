@@ -11,6 +11,8 @@ import type {
   OrderItem,
   PackageType,
 } from "@/lib/database.types";
+import { getAppSettings } from "@/lib/settings";
+import { getPaytrSettings } from "@/lib/payments/paytr";
 import { OrderBuilder, type InitialCartLine } from "./order-builder";
 
 function groupBy(rows: { model_id: string }[], key: "size_id" | "color_id") {
@@ -45,6 +47,13 @@ export default async function SiparisOlusturPage({
       supabase.from("album_model_sizes").select("*").returns<AlbumModelSize[]>(),
       supabase.from("album_model_colors").select("*").returns<AlbumModelColor[]>(),
     ]);
+
+  const [appSettings, paytrSettings] = await Promise.all([getAppSettings(), getPaytrSettings()]);
+  const bankTransferInfo = {
+    bankName: appSettings.bank_transfer_bank_name || "Banka bilgisi girilmemiş",
+    accountName: appSettings.bank_transfer_account_name || "",
+    iban: appSettings.bank_transfer_iban || "IBAN girilmemiş",
+  };
 
   let initialCart: InitialCartLine[] = [];
   if (tekrar) {
@@ -102,6 +111,8 @@ export default async function SiparisOlusturPage({
         discountRate={company?.discount_rate ?? 0}
         companyId={profile.company_id}
         initialCart={initialCart}
+        bankTransferInfo={bankTransferInfo}
+        paytrEnabled={!!paytrSettings}
       />
     </div>
   );

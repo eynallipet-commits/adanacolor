@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { requirePhotographer } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { calcAlbumUnitPrice, calcOrderTotals } from "@/lib/pricing";
-import { mockCharge, BANK_TRANSFER_INFO } from "@/lib/payments/mock";
+import { mockCharge } from "@/lib/payments/mock";
+import { getPaytrSettings } from "@/lib/payments/paytr";
 import type {
   AlbumColor,
   AlbumModelColor,
@@ -221,6 +222,22 @@ export async function createOrderAction(
   }
 
   if (paymentMethod === "credit_card") {
+    const paytrSettings = await getPaytrSettings();
+
+    if (paytrSettings) {
+      // Gerçek ödeme: kart bilgisi hiç bize gelmez, PayTR'nin iframe'inde alınır. Sipariş
+      // "pending_payment" olarak kalır, /ode sayfası token üretip iframe'i gösterir, sonuç
+      // PayTR'nin bildirim (webhook) uç noktasından gelir.
+      await supabase.from("payments").insert({
+        order_id: order.id,
+        method: "credit_card",
+        amount: total,
+        status: "pending",
+      });
+      redirect(`/panel/siparisler/${order.id}/ode`);
+    }
+
+    // PayTR henüz yapılandırılmamış/kapalıysa mock (anında test) ödemeye düş.
     const charge = await mockCharge({ orderId: order.id, amount: total });
     await supabase.from("payments").insert({
       order_id: order.id,
@@ -239,7 +256,6 @@ export async function createOrderAction(
       method: "bank_transfer",
       amount: total,
       status: "pending",
-      mock_reference: BANK_TRANSFER_INFO.iban,
     });
     await supabase.from("orders").update({ status: "payment_review" }).eq("id", order.id);
   }

@@ -206,6 +206,16 @@ export interface Payment {
   created_at: string;
 }
 
+export interface PaymentProviderSettings {
+  id: true;
+  paytr_enabled: boolean;
+  paytr_test_mode: boolean;
+  paytr_merchant_id: string | null;
+  paytr_merchant_key: string | null;
+  paytr_merchant_salt: string | null;
+  updated_at: string;
+}
+
 export interface PhotoChangeRequest {
   id: string;
   order_id: string;

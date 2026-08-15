@@ -13,6 +13,9 @@ export interface AppSettings {
   gtm_id: string | null;
   facebook_pixel_id: string | null;
   google_site_verification: string | null;
+  bank_transfer_bank_name: string | null;
+  bank_transfer_account_name: string | null;
+  bank_transfer_iban: string | null;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -28,10 +31,13 @@ const DEFAULT_SETTINGS: AppSettings = {
   gtm_id: null,
   facebook_pixel_id: null,
   google_site_verification: null,
+  bank_transfer_bank_name: null,
+  bank_transfer_account_name: null,
+  bank_transfer_iban: null,
 };
 
 const SETTINGS_COLUMNS =
-  "estimated_min_days,estimated_max_days,invoice_seller_tax_office,invoice_seller_tax_no,invoice_seller_iban,invoice_kdv_rate,seo_meta_title,seo_meta_description,ga_measurement_id,gtm_id,facebook_pixel_id,google_site_verification";
+  "estimated_min_days,estimated_max_days,invoice_seller_tax_office,invoice_seller_tax_no,invoice_seller_iban,invoice_kdv_rate,seo_meta_title,seo_meta_description,ga_measurement_id,gtm_id,facebook_pixel_id,google_site_verification,bank_transfer_bank_name,bank_transfer_account_name,bank_transfer_iban";
 
 export async function getAppSettings(): Promise<AppSettings> {
   const supabase = await createClient();

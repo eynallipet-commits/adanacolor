@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/lib/order-status";
 import { cn, formatDate, formatTL } from "@/lib/utils";
-import { BANK_TRANSFER_INFO } from "@/lib/payments/mock";
 import { getRequiredPhotoCount, canManagePhotosDirectly, canRequestPhotoChange } from "@/lib/storage";
 import { getAppSettings, formatEstimatedDeliveryRange } from "@/lib/settings";
 import { OrderPhotos } from "@/components/order-photos";
@@ -31,11 +30,12 @@ export default async function SiparisDetayPage({ params }: { params: Promise<{ i
   const pendingRequestByItem = new Map(
     photoChangeRequests.filter((r) => r.status === "pending").map((r) => [r.order_item_id, r])
   );
+  const appSettings = await getAppSettings();
   const showDeliveryEstimate = PAID_STATUSES.includes(order.status);
   const estimateRange = showDeliveryEstimate
     ? formatEstimatedDeliveryRange(
         payments.find((p) => p.status === "confirmed")?.confirmed_at ?? order.created_at,
-        await getAppSettings()
+        appSettings
       )
     : null;
 
@@ -81,12 +81,24 @@ export default async function SiparisDetayPage({ params }: { params: Promise<{ i
           <CardContent className="p-5 text-sm text-amber-800">
             <p className="font-medium">Havale ödemenizi bekliyoruz.</p>
             <p className="mt-1">
-              {BANK_TRANSFER_INFO.bankName} — {BANK_TRANSFER_INFO.accountName}
+              {appSettings.bank_transfer_bank_name || "Banka bilgisi girilmemiş"} —{" "}
+              {appSettings.bank_transfer_account_name || "—"}
               <br />
-              IBAN: {BANK_TRANSFER_INFO.iban}
+              IBAN: {appSettings.bank_transfer_iban || "IBAN girilmemiş"}
               <br />
               Açıklama: {order.order_no}
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {order.status === "pending_payment" && order.payment_method === "credit_card" && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-5 text-sm text-amber-800">
+            <p className="font-medium">Ödemeniz henüz tamamlanmadı.</p>
+            <Link href={`/panel/siparisler/${order.id}/ode`} className={cn(buttonVariants({ size: "sm" }))}>
+              Ödeme Sayfasına Dön
+            </Link>
           </CardContent>
         </Card>
       )}

@@ -15,7 +15,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { BANK_TRANSFER_INFO } from "@/lib/payments/mock";
 import { OrderPhotos } from "@/components/order-photos";
 import { ColorSwatch, colorLabel } from "@/components/color-swatch";
 import { ImagePreviewModal } from "@/components/image-preview-modal";
@@ -90,6 +89,8 @@ export function OrderBuilder({
   discountRate,
   companyId,
   initialCart = [],
+  bankTransferInfo,
+  paytrEnabled,
 }: {
   sizes: AlbumSize[];
   packages: PackageType[];
@@ -102,6 +103,8 @@ export function OrderBuilder({
   discountRate: number;
   companyId: string;
   initialCart?: InitialCartLine[];
+  bankTransferInfo: { bankName: string; accountName: string; iban: string };
+  paytrEnabled: boolean;
 }) {
   const colorMap = useMemo(() => new Map(colors.map((c) => [c.id, c])), [colors]);
   const sizeCodeMap = useMemo(() => new Map(sizes.map((s) => [s.id, s.code])), [sizes]);
@@ -171,6 +174,7 @@ export function OrderBuilder({
 
   const cardValid =
     paymentMethod !== "credit_card" ||
+    paytrEnabled ||
     (/^\d{4} ?\d{4} ?\d{4} ?\d{4}$/.test(card.number.trim()) &&
       /^\d{2}\/\d{2}$/.test(card.expiry.trim()) &&
       /^\d{3,4}$/.test(card.cvv.trim()) &&
@@ -807,9 +811,13 @@ export function OrderBuilder({
                 <CreditCard className="h-4.5 w-4.5" />
               </span>
               <span>
-                <span className="block text-sm font-medium">Kredi Kartı (Test Modu)</span>
+                <span className="block text-sm font-medium">
+                  Kredi Kartı{!paytrEnabled && " (Test Modu)"}
+                </span>
                 <span className="block text-xs text-neutral-500">
-                  Gerçek bir tahsilat yapılmaz; sipariş anında &quot;ödendi&quot; olarak işaretlenir.
+                  {paytrEnabled
+                    ? "Ödeme bir sonraki adımda PayTR'nin güvenli sayfasında alınır."
+                    : "Gerçek bir tahsilat yapılmaz; sipariş anında “ödendi” olarak işaretlenir."}
                 </span>
               </span>
             </label>
@@ -837,12 +845,20 @@ export function OrderBuilder({
               <span>
                 <span className="block text-sm font-medium">Havale / EFT</span>
                 <span className="block text-xs text-neutral-500">
-                  {BANK_TRANSFER_INFO.bankName} — {BANK_TRANSFER_INFO.iban}
+                  {bankTransferInfo.bankName} — {bankTransferInfo.iban}
                 </span>
               </span>
             </label>
 
-            {paymentMethod === "credit_card" && (
+            {paymentMethod === "credit_card" && paytrEnabled && (
+              <p className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+                <Lock className="h-3.5 w-3.5 shrink-0" />
+                Kart bilgileriniz atölyemizin sunucularına hiç ulaşmaz; siparişi oluşturduktan sonra
+                PayTR&apos;nin güvenli sayfasına yönlendirileceksiniz.
+              </p>
+            )}
+
+            {paymentMethod === "credit_card" && !paytrEnabled && (
               <div className="space-y-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
                 <p className="flex items-center gap-1.5 text-xs text-neutral-500">
                   <Lock className="h-3.5 w-3.5" />
@@ -915,7 +931,13 @@ export function OrderBuilder({
                 <p className="mb-3 text-xs text-neutral-500">Devam etmek için kart bilgilerini eksiksiz girin.</p>
               )}
               <Button type="submit" className="w-full" disabled={isPending || cart.length === 0 || !cardValid}>
-                {isPending ? "Gönderiliyor..." : paymentMethod === "credit_card" ? "Ödeme Yap" : "Siparişi Oluştur"}
+                {isPending
+                  ? "Gönderiliyor..."
+                  : paymentMethod === "credit_card"
+                    ? paytrEnabled
+                      ? "Ödemeye Geç"
+                      : "Ödeme Yap"
+                    : "Siparişi Oluştur"}
               </Button>
             </form>
           </CardContent>
