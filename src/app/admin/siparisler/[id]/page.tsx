@@ -16,6 +16,7 @@ import { cn, formatDate, formatTL } from "@/lib/utils";
 import type { Company } from "@/lib/database.types";
 import { getRequiredPhotoCount } from "@/lib/storage";
 import { OrderActions } from "./order-actions";
+import { ResolvePhotoRequest } from "./resolve-photo-request";
 
 export default async function AdminSiparisDetayPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -23,7 +24,10 @@ export default async function AdminSiparisDetayPage({ params }: { params: Promis
   const detail = await getOrderDetail(id);
   if (!detail) notFound();
 
-  const { order, items, history, payments } = detail;
+  const { order, items, history, payments, photoChangeRequests } = detail;
+  const pendingRequestByItem = new Map(
+    photoChangeRequests.filter((r) => r.status === "pending").map((r) => [r.order_item_id, r])
+  );
   const supabase = await createClient();
   const { data: company } = await supabase
     .from("companies")
@@ -82,29 +86,37 @@ export default async function AdminSiparisDetayPage({ params }: { params: Promis
           <CardDescription>Fotoğrafçının yüklediği dosyalar — üretim için buradan indirin.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {items.map((item) => (
-            <div key={item.id} className="border-t border-neutral-100 pt-4 first:border-0 first:pt-0">
-              <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
-                <span>
-                  {item.item_type === "album" ? item.sizeLabel : item.extraLabel}
-                  {item.item_type === "album" && item.packageLabel ? ` · ${item.packageLabel}` : ""}
-                  {item.modelLabel ? ` · ${item.modelLabel}` : ""}
-                </span>
-                {item.colorLabel && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2 py-0.5 text-xs">
-                    {item.color && <ColorSwatch color={item.color} className="h-4 w-5" />}
-                    Renk: {item.colorLabel}
+          {items.map((item) => {
+            const pendingRequest = pendingRequestByItem.get(item.id) ?? null;
+            return (
+              <div key={item.id} className="border-t border-neutral-100 pt-4 first:border-0 first:pt-0">
+                <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
+                  <span>
+                    {item.item_type === "album" ? item.sizeLabel : item.extraLabel}
+                    {item.item_type === "album" && item.packageLabel ? ` · ${item.packageLabel}` : ""}
+                    {item.modelLabel ? ` · ${item.modelLabel}` : ""}
                   </span>
+                  {item.colorLabel && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-2 py-0.5 text-xs">
+                      {item.color && <ColorSwatch color={item.color} className="h-4 w-5" />}
+                      Renk: {item.colorLabel}
+                    </span>
+                  )}
+                </div>
+                {pendingRequest && (
+                  <div className="mb-2">
+                    <ResolvePhotoRequest orderId={order.id} request={pendingRequest} />
+                  </div>
                 )}
+                <OrderPhotos
+                  companyId={order.company_id}
+                  itemId={item.id}
+                  requiredCount={getRequiredPhotoCount(item)}
+                  canManage={false}
+                />
               </div>
-              <OrderPhotos
-                companyId={order.company_id}
-                itemId={item.id}
-                requiredCount={getRequiredPhotoCount(item)}
-                canManage={false}
-              />
-            </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
 

@@ -206,6 +206,19 @@ export interface Payment {
   created_at: string;
 }
 
+export interface PhotoChangeRequest {
+  id: string;
+  order_id: string;
+  order_item_id: string;
+  company_id: string;
+  note: string;
+  status: "pending" | "resolved";
+  created_by: string | null;
+  resolved_by: string | null;
+  resolved_at: string | null;
+  created_at: string;
+}
+
 // Minimal Supabase Database şeması — supabase-js generic'i için yeterli.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Database = any;

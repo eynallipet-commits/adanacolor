@@ -9,6 +9,7 @@ import type {
   OrderStatusHistory,
   PackageType,
   Payment,
+  PhotoChangeRequest,
 } from "@/lib/database.types";
 
 export interface EnrichedOrderItem extends OrderItem {
@@ -28,7 +29,7 @@ export async function getOrderDetail(orderId: string) {
   const { data: order } = await supabase.from("orders").select("*").eq("id", orderId).single<Order>();
   if (!order) return null;
 
-  const [itemsRes, historyRes, paymentsRes, sizesRes, packagesRes, modelsRes, extrasRes, colorsRes] =
+  const [itemsRes, historyRes, paymentsRes, sizesRes, packagesRes, modelsRes, extrasRes, colorsRes, photoRequestsRes] =
     await Promise.all([
       supabase.from("order_items").select("*").eq("order_id", orderId).returns<OrderItem[]>(),
       supabase
@@ -43,6 +44,12 @@ export async function getOrderDetail(orderId: string) {
       supabase.from("album_models").select("*").returns<AlbumModel[]>(),
       supabase.from("extra_products").select("*").returns<ExtraProduct[]>(),
       supabase.from("album_colors").select("*").returns<AlbumColor[]>(),
+      supabase
+        .from("photo_change_requests")
+        .select("*")
+        .eq("order_id", orderId)
+        .order("created_at", { ascending: false })
+        .returns<PhotoChangeRequest[]>(),
     ]);
 
   const sizeMap = new Map((sizesRes.data ?? []).map((s) => [s.id, s]));
@@ -69,5 +76,6 @@ export async function getOrderDetail(orderId: string) {
     items,
     history: historyRes.data ?? [],
     payments: paymentsRes.data ?? [],
+    photoChangeRequests: photoRequestsRes.data ?? [],
   };
 }

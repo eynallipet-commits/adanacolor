@@ -10,10 +10,11 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/lib/order-status";
 import { cn, formatDate, formatTL } from "@/lib/utils";
 import { BANK_TRANSFER_INFO } from "@/lib/payments/mock";
-import { getRequiredPhotoCount, isEditableOrderStatus } from "@/lib/storage";
+import { getRequiredPhotoCount, canManagePhotosDirectly, canRequestPhotoChange } from "@/lib/storage";
 import { getAppSettings, formatEstimatedDeliveryRange } from "@/lib/settings";
 import { OrderPhotos } from "@/components/order-photos";
 import { OrderStatusStepper } from "@/components/order-status-stepper";
+import { PhotoChangeRequestButton } from "./photo-change-request";
 
 const PAID_STATUSES = ["paid", "in_production", "shipped", "delivered"];
 
@@ -26,7 +27,10 @@ export default async function SiparisDetayPage({ params }: { params: Promise<{ i
     notFound();
   }
 
-  const { order, items, history, payments } = detail;
+  const { order, items, history, payments, photoChangeRequests } = detail;
+  const pendingRequestByItem = new Map(
+    photoChangeRequests.filter((r) => r.status === "pending").map((r) => [r.order_item_id, r])
+  );
   const showDeliveryEstimate = PAID_STATUSES.includes(order.status);
   const estimateRange = showDeliveryEstimate
     ? formatEstimatedDeliveryRange(
@@ -103,6 +107,27 @@ export default async function SiparisDetayPage({ params }: { params: Promise<{ i
         </Card>
       )}
 
+      {(order.shipping_carrier || order.tracking_number) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Truck className="h-4 w-4 text-brand-600" />
+              Kargo Takip
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <p className="text-neutral-500">Kargo Firması</p>
+              <p className="font-medium">{order.shipping_carrier || "—"}</p>
+            </div>
+            <div>
+              <p className="text-neutral-500">Takip Numarası</p>
+              <p className="font-medium">{order.tracking_number || "—"}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -114,20 +139,33 @@ export default async function SiparisDetayPage({ params }: { params: Promise<{ i
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {items.map((item) => (
-            <div key={item.id} className="border-t border-neutral-100 pt-4 first:border-0 first:pt-0">
-              <p className="mb-2 text-sm font-medium">
-                {item.item_type === "album" ? item.sizeLabel : item.extraLabel}
-                {item.item_type === "album" && item.packageLabel ? ` · ${item.packageLabel}` : ""}
-              </p>
-              <OrderPhotos
-                companyId={order.company_id}
-                itemId={item.id}
-                requiredCount={getRequiredPhotoCount(item)}
-                canManage={isEditableOrderStatus(order.status)}
-              />
-            </div>
-          ))}
+          {items.map((item) => {
+            const pendingRequest = pendingRequestByItem.get(item.id) ?? null;
+            const canManage = canManagePhotosDirectly(order.status) || !!pendingRequest;
+            return (
+              <div key={item.id} className="border-t border-neutral-100 pt-4 first:border-0 first:pt-0">
+                <p className="mb-2 text-sm font-medium">
+                  {item.item_type === "album" ? item.sizeLabel : item.extraLabel}
+                  {item.item_type === "album" && item.packageLabel ? ` · ${item.packageLabel}` : ""}
+                </p>
+                <OrderPhotos
+                  companyId={order.company_id}
+                  itemId={item.id}
+                  requiredCount={getRequiredPhotoCount(item)}
+                  canManage={canManage}
+                />
+                {canRequestPhotoChange(order.status) && (
+                  <div className="mt-3">
+                    <PhotoChangeRequestButton
+                      orderId={order.id}
+                      orderItemId={item.id}
+                      pendingRequest={pendingRequest}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </CardContent>
       </Card>
 

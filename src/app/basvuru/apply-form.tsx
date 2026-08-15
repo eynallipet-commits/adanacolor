@@ -58,10 +58,12 @@ export function ApplyForm() {
     setUploading(true);
     const supabase = createClient();
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const path = `${applicationId}/vergi-levhasi-${safeName}`;
-    const { error } = await supabase.storage
-      .from(MEMBERSHIP_DOCUMENTS_BUCKET)
-      .upload(path, file, { upsert: true });
+    // Her yükleme benzersiz bir yola gitsin diye (aynı dosya adıyla "Değiştir" sonrası tekrar
+    // seçim dahil) — bucket'ta yalnızca admin okuma izni olduğundan upsert'in gerektirdiği
+    // "obje var mı" kontrolü anonim kullanıcı için RLS'e takılıyordu, bu yüzden upsert
+    // kullanmıyoruz.
+    const path = `${applicationId}/${Date.now()}-vergi-levhasi-${safeName}`;
+    const { error } = await supabase.storage.from(MEMBERSHIP_DOCUMENTS_BUCKET).upload(path, file);
     setUploading(false);
 
     if (error) {

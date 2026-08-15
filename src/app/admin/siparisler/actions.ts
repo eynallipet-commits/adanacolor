@@ -19,6 +19,18 @@ export async function confirmBankTransferAction(orderId: string) {
   revalidatePath("/admin/siparisler");
 }
 
+export async function resolvePhotoChangeRequestAction(requestId: string, orderId: string) {
+  const { profile } = await requireAdmin();
+  const supabase = await createClient();
+
+  await supabase
+    .from("photo_change_requests")
+    .update({ status: "resolved", resolved_by: profile.id, resolved_at: new Date().toISOString() })
+    .eq("id", requestId);
+
+  revalidatePath(`/admin/siparisler/${orderId}`);
+}
+
 export async function startProductionAction(orderId: string) {
   await requireAdmin();
   const supabase = await createClient();

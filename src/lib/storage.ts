@@ -14,6 +14,16 @@ export function isEditableOrderStatus(status: string) {
   return status !== "delivered" && status !== "cancelled";
 }
 
+/** Ödeme onaylanmadan önce (taslak/ödeme bekleniyor/inceleniyor) fotoğraflar serbestçe yönetilebilir. */
+export function canManagePhotosDirectly(status: string) {
+  return status === "draft" || status === "pending_payment" || status === "payment_review";
+}
+
+/** "Fotoğraf değişikliği talep et" butonu yalnızca ödeme sonrası, üretime alınana kadar aktif. */
+export function canRequestPhotoChange(status: string) {
+  return status === "paid";
+}
+
 /**
  * Bir sipariş kalemi için yüklenmesi gereken fotoğraf adedi.
  * Albümde her sayfa en az bir fotoğraf gerektirir; ekstra ürünlerde (canvas/baskı/kutu)
