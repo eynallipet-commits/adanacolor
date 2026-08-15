@@ -1,0 +1,75 @@
+/**
+ * Kurumsal bilgiler — sitenin her yerinde (footer, iletişim, harita, proforma belge)
+ * buradan okunur. Bilgileri değiştirmek için yalnızca bu dosyayı düzenlemeniz yeterli.
+ *
+ * Boş bırakılan alanlar arayüzde hiç gösterilmez; uydurma bilgi görünmesin diye
+ * bilerek böyle yapıldı. Gerçek değerleri girdikçe ilgili satırlar otomatik belirir.
+ */
+interface CompanyInfo {
+  legalName: string;
+  brandName: string;
+  tagline: string;
+  addressLine: string;
+  district: string;
+  city: string;
+  country: string;
+  phone: string;
+  whatsapp: string;
+  email: string;
+  workingHours: string[];
+  instagram: string;
+  taxOffice: string;
+  taxNumber: string;
+}
+
+export const COMPANY: CompanyInfo = {
+  legalName: "Adana Color Foto Albüm San. Tic. Ltd. Şti.",
+  brandName: "Adana Color Albüm",
+  tagline: "Fotoğrafçılar için albüm, canvas ve baskı üretimi",
+
+  /** Açık adres (mahalle/cadde/no). Boşsa footer'da yalnızca şehir görünür. */
+  addressLine: "",
+  district: "",
+  city: "Adana",
+  country: "Türkiye",
+
+  /** Telefon/e-posta boşsa o satır footer'da görünmez. */
+  phone: "",
+  /** Sadece rakam, ülke koduyla: 905xxxxxxxxx */
+  whatsapp: "",
+  email: "",
+
+  /** Örn: ["Pazartesi - Cuma: 09:00 - 18:00", "Cumartesi: 09:00 - 14:00"] */
+  workingHours: [],
+
+  instagram: "https://www.instagram.com/adanacoloralbum/",
+
+  /** Vergi dairesi / no, Mersis vb. — kurumsal şeffaflık için, boşsa gizlenir. */
+  taxOffice: "",
+  taxNumber: "",
+};
+
+/** Footer ve iletişim bölümünde gösterilecek tek satırlık adres. */
+export function formatAddress() {
+  return [COMPANY.addressLine, COMPANY.district, COMPANY.city, COMPANY.country]
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
+/** Google Maps embed (API anahtarı gerektirmez) ve "yol tarifi" bağlantısı için sorgu. */
+export function mapsQuery() {
+  const parts = [COMPANY.addressLine, COMPANY.district, COMPANY.city, COMPANY.country]
+    .map((p) => p.trim())
+    .filter(Boolean);
+  // Açık adres girilmediyse işletme adıyla ara.
+  return parts.length > 2 ? parts.join(", ") : `${COMPANY.legalName}, ${COMPANY.city}`;
+}
+
+export function mapsEmbedUrl() {
+  return `https://www.google.com/maps?q=${encodeURIComponent(mapsQuery())}&output=embed`;
+}
+
+export function mapsDirectionsUrl() {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery())}`;
+}

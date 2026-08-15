@@ -21,6 +21,16 @@
   --color-gold-400: #e0b15c;
   --color-gold-500: #cc9843;
   --color-gold-600: #ad7c32;
+
+  /* Kurumsal koyu ton: lacivert-antrasit. Koyu bölümlerin zemini. */
+  --color-ink-50: #f4f6f9;
+  --color-ink-100: #e6eaf1;
+  --color-ink-300: #a9b4c7;
+  --color-ink-500: #4b5b76;
+  --color-ink-700: #23304a;
+  --color-ink-800: #16213a;
+  --color-ink-900: #0e1729;
+  --color-ink-950: #070d1a;
 }
 
 @theme inline {
@@ -45,6 +55,15 @@
   --color-gold-400: var(--color-gold-400);
   --color-gold-500: var(--color-gold-500);
   --color-gold-600: var(--color-gold-600);
+
+  --color-ink-50: var(--color-ink-50);
+  --color-ink-100: var(--color-ink-100);
+  --color-ink-300: var(--color-ink-300);
+  --color-ink-500: var(--color-ink-500);
+  --color-ink-700: var(--color-ink-700);
+  --color-ink-800: var(--color-ink-800);
+  --color-ink-900: var(--color-ink-900);
+  --color-ink-950: var(--color-ink-950);
 }
 
 body {
