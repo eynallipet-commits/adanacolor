@@ -17,6 +17,7 @@ import type { Company } from "@/lib/database.types";
 import { getRequiredPhotoCount } from "@/lib/storage";
 import { OrderActions } from "./order-actions";
 import { ResolvePhotoRequest } from "./resolve-photo-request";
+import { DeleteOrderPhotosButton } from "@/app/admin/depolama/delete-order-photos-button";
 
 export default async function AdminSiparisDetayPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -78,12 +79,15 @@ export default async function AdminSiparisDetayPage({ params }: { params: Promis
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Images className="h-4 w-4 text-brand-600" />
-            Fotoğraflar
-          </CardTitle>
-          <CardDescription>Fotoğrafçının yüklediği dosyalar — üretim için buradan indirin.</CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Images className="h-4 w-4 text-brand-600" />
+              Fotoğraflar
+            </CardTitle>
+            <CardDescription>Fotoğrafçının yüklediği dosyalar — üretim için buradan indirin.</CardDescription>
+          </div>
+          <DeleteOrderPhotosButton orderId={order.id} />
         </CardHeader>
         <CardContent className="space-y-6">
           {items.map((item) => {

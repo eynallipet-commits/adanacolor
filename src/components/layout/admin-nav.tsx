@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, FileCheck2, Users, Boxes, ClipboardList, BarChart3, ShieldCheck, Landmark, Settings, CreditCard } from "lucide-react";
+import { LayoutDashboard, FileCheck2, Users, Boxes, ClipboardList, BarChart3, ShieldCheck, Landmark, Settings, CreditCard, HardDrive } from "lucide-react";
 import { InstagramIcon } from "@/components/icons/instagram-icon";
 import { NavLinks } from "./nav-links";
 
@@ -13,6 +13,7 @@ const items = [
   { href: "/admin/raporlar", label: "Raporlar", icon: BarChart3 },
   { href: "/admin/odeme", label: "Ödeme", icon: CreditCard },
   { href: "/admin/muhasebe", label: "Muhasebe", icon: Landmark },
+  { href: "/admin/depolama", label: "Depolama", icon: HardDrive },
   { href: "/admin/instagram", label: "Instagram Galerisi", icon: InstagramIcon },
   { href: "/admin/kullanicilar", label: "Kullanıcılar", icon: ShieldCheck },
   { href: "/admin/ayarlar", label: "Ayarlar", icon: Settings },
