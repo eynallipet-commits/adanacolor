@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
+import { COMPANY } from "@/lib/company";
 
-const SITE_URL = "https://adanacoloralbum.com";
+const SITE_URL = COMPANY.siteUrl;
 
 export default function robots(): MetadataRoute.Robots {
   return {

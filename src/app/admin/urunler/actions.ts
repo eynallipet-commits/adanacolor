@@ -245,6 +245,50 @@ export async function updatePackageTypeAction(
   return {};
 }
 
+export async function addPagePriceTierAction(
+  packageTypeId: string,
+  minPages: number,
+  maxPages: number | null,
+  extraPagePrice: number
+): Promise<FormState> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  if (!Number.isInteger(minPages) || minPages < 1) {
+    return { error: "Başlangıç sayfa sayısı en az 1 olmalı." };
+  }
+  if (maxPages !== null && (!Number.isInteger(maxPages) || maxPages < minPages)) {
+    return { error: "Bitiş sayfa sayısı, başlangıçtan küçük olamaz." };
+  }
+  if (!Number.isFinite(extraPagePrice) || extraPagePrice < 0) {
+    return { error: "Geçerli bir sayfa başı ücret girin." };
+  }
+
+  const { error } = await supabase.from("package_page_prices").insert({
+    package_type_id: packageTypeId,
+    min_pages: minPages,
+    max_pages: maxPages,
+    extra_page_price: Math.round(extraPagePrice * 100) / 100,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/urunler");
+  revalidatePath("/panel/siparis-olustur");
+  return {};
+}
+
+export async function deletePagePriceTierAction(id: string): Promise<FormState> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("package_page_prices").delete().eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/urunler");
+  revalidatePath("/panel/siparis-olustur");
+  return {};
+}
+
 export async function deletePackageTypeAction(id: string): Promise<FormState> {
   await requireAdmin();
   const supabase = await createClient();

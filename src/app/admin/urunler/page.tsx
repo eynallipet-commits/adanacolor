@@ -10,6 +10,7 @@ import type {
   AlbumSize,
   AlbumSizePrice,
   ExtraProduct,
+  PackagePagePrice,
   PackageType,
 } from "@/lib/database.types";
 import { getAppSettings } from "@/lib/settings";
@@ -31,7 +32,18 @@ export default async function UrunlerPage() {
   await requireAdmin();
   const supabase = await createClient();
 
-  const [sizesRes, packagesRes, pricesRes, modelsRes, extrasRes, colorsRes, modelSizesRes, modelColorsRes, settings] =
+  const [
+    sizesRes,
+    packagesRes,
+    pricesRes,
+    modelsRes,
+    extrasRes,
+    colorsRes,
+    modelSizesRes,
+    modelColorsRes,
+    settings,
+    pageTiersRes,
+  ] =
     await Promise.all([
       supabase.from("album_sizes").select("*").order("sort_order").returns<AlbumSize[]>(),
       supabase.from("package_types").select("*").order("sort_order").returns<PackageType[]>(),
@@ -42,6 +54,11 @@ export default async function UrunlerPage() {
       supabase.from("album_model_sizes").select("*").returns<AlbumModelSize[]>(),
       supabase.from("album_model_colors").select("*").returns<AlbumModelColor[]>(),
       getAppSettings(),
+      supabase
+        .from("package_page_prices")
+        .select("*")
+        .order("min_pages")
+        .returns<PackagePagePrice[]>(),
     ]);
 
   const modelSizes = groupBy(modelSizesRes.data ?? [], "size_id");
@@ -77,7 +94,7 @@ export default async function UrunlerPage() {
         <CardContent className="space-y-4">
           <PriceMatrix sizes={sizesRes.data ?? []} packages={packagesRes.data ?? []} prices={pricesRes.data ?? []} />
           <SizeManager sizes={sizesRes.data ?? []} />
-          <PackageManager packages={packagesRes.data ?? []} />
+          <PackageManager packages={packagesRes.data ?? []} pageTiers={pageTiersRes.data ?? []} />
         </CardContent>
       </Card>
 

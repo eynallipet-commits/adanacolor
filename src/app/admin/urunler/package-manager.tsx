@@ -8,11 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
-import type { PackageType } from "@/lib/database.types";
+import { PagePriceTiers } from "./page-price-tiers";
+import type { PackagePagePrice, PackageType } from "@/lib/database.types";
 
 const initial: FormState = {};
 
-function PackageRow({ pkg }: { pkg: PackageType }) {
+function PackageRow({ pkg, tiers }: { pkg: PackageType; tiers: PackagePagePrice[] }) {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(pkg.name);
   const [basePageCount, setBasePageCount] = useState(pkg.base_page_count.toString());
@@ -93,6 +94,7 @@ function PackageRow({ pkg }: { pkg: PackageType }) {
             <ConfirmDelete onConfirm={() => deletePackageTypeAction(pkg.id)} label="Sil" />
           </span>
         </div>
+        <PagePriceTiers pkg={pkg} tiers={tiers} />
       </li>
     );
   }
@@ -109,6 +111,9 @@ function PackageRow({ pkg }: { pkg: PackageType }) {
           <span className="block truncate font-medium text-neutral-800">{pkg.name}</span>
           <span className="block text-xs text-neutral-500">
             Taban {pkg.base_page_count} sayfa · ek sayfa ₺{pkg.extra_page_price.toFixed(2)}
+            {tiers.length > 0 && (
+              <span className="ml-1 text-brand-700">· {tiers.length} sayfa kampanyası</span>
+            )}
           </span>
         </span>
       </button>
@@ -116,8 +121,20 @@ function PackageRow({ pkg }: { pkg: PackageType }) {
   );
 }
 
-export function PackageManager({ packages }: { packages: PackageType[] }) {
+export function PackageManager({
+  packages,
+  pageTiers,
+}: {
+  packages: PackageType[];
+  pageTiers: PackagePagePrice[];
+}) {
   const [state, formAction, isPending] = useActionState(addPackageTypeAction, initial);
+  const tiersByPackage = new Map<string, PackagePagePrice[]>();
+  for (const t of pageTiers) {
+    const list = tiersByPackage.get(t.package_type_id) ?? [];
+    list.push(t);
+    tiersByPackage.set(t.package_type_id, list);
+  }
 
   return (
     <div className="space-y-3 border-t border-neutral-200 pt-4">
@@ -136,7 +153,7 @@ export function PackageManager({ packages }: { packages: PackageType[] }) {
 
       <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {packages.map((pkg) => (
-          <PackageRow key={pkg.id} pkg={pkg} />
+          <PackageRow key={pkg.id} pkg={pkg} tiers={tiersByPackage.get(pkg.id) ?? []} />
         ))}
       </ul>
 

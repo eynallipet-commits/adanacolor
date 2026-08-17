@@ -11,6 +11,7 @@ import type {
   AlbumModelColor,
   AlbumModelSize,
   AlbumSizePrice,
+  PackagePagePrice,
   PackageType,
 } from "@/lib/database.types";
 
@@ -75,6 +76,10 @@ export async function createOrderAction(
   // Fiyatları ve ürün kısıtlarını client'tan asla güvenmeden, veritabanından yeniden doğrula.
   const { data: prices } = await supabase.from("album_size_prices").select("*").returns<AlbumSizePrice[]>();
   const { data: packages } = await supabase.from("package_types").select("*").returns<PackageType[]>();
+  const { data: pageTiers } = await supabase
+    .from("package_page_prices")
+    .select("*")
+    .returns<PackagePagePrice[]>();
   const { data: extras } = await supabase.from("extra_products").select("*");
   const { data: modelSizes } = await supabase.from("album_model_sizes").select("*").returns<AlbumModelSize[]>();
   const { data: modelColors } = await supabase.from("album_model_colors").select("*").returns<AlbumModelColor[]>();
@@ -82,6 +87,13 @@ export async function createOrderAction(
 
   const priceMap = new Map((prices ?? []).map((p) => [`${p.size_id}:${p.package_type_id}`, p.price]));
   const packageMap = new Map((packages ?? []).map((p) => [p.id, p]));
+  // Kampanya kademeleri de fiyat gibi sunucuda yeniden çözülür; istemciden gelen tutara güvenilmez.
+  const tiersByPackage = (pageTiers ?? []).reduce<Map<string, PackagePagePrice[]>>((acc, t) => {
+    const list = acc.get(t.package_type_id) ?? [];
+    list.push(t);
+    acc.set(t.package_type_id, list);
+    return acc;
+  }, new Map());
   const extraMap = new Map((extras ?? []).map((e) => [e.id, e]));
   const colorMap = new Map((colors ?? []).map((c) => [c.id, c]));
 
@@ -148,7 +160,7 @@ export async function createOrderAction(
 
       const quantity = Math.max(1, Math.floor(item.quantity));
       const pageCount = Math.max(pkg.base_page_count, Math.floor(item.pageCount));
-      const unitPrice = calcAlbumUnitPrice(basePrice, pkg, pageCount);
+      const unitPrice = calcAlbumUnitPrice(basePrice, pkg, pageCount, tiersByPackage.get(pkg.id) ?? []);
       lines.push({
         id,
         item_type: "album",

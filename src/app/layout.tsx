@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { COMPANY } from "@/lib/company";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,7 +21,7 @@ const playfair = Playfair_Display({
   weight: ["600", "700", "800"],
 });
 
-const SITE_URL = "https://adanacoloralbum.com";
+const SITE_URL = COMPANY.siteUrl;
 const SITE_TITLE = "Adana Color Albüm — Fotoğrafçılar için Albüm Üretimi";
 const SITE_DESCRIPTION =
   "Fotoğrafçılara özel fotoğraf albümü, canvas ve foto baskı üretimi. Adana'dan tüm Türkiye'ye toptan albüm baskı, hızlı üretim ve güvenilir kargo.";

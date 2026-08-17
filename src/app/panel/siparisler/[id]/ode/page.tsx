@@ -4,6 +4,7 @@ import { ShieldCheck } from "lucide-react";
 import { requirePhotographer } from "@/lib/auth";
 import { getOrderDetail } from "@/lib/orders";
 import { getPaytrSettings, getPaytrToken, toMerchantOid, type PaytrBasketItem } from "@/lib/payments/paytr";
+import { COMPANY } from "@/lib/company";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PaytrIframe } from "./paytr-iframe";
 
@@ -26,7 +27,7 @@ export default async function OdemePage({ params }: { params: Promise<{ id: stri
   }
 
   const h = await headers();
-  const host = h.get("host") ?? "adanacoloralbum.com";
+  const host = h.get("host") ?? new URL(COMPANY.siteUrl).host;
   const proto = h.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");
   const baseUrl = `${proto}://${host}`;
   const userIp = (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || "85.111.20.20";
@@ -40,7 +41,7 @@ export default async function OdemePage({ params }: { params: Promise<{ id: stri
   const result = await getPaytrToken({
     settings: paytrSettings,
     merchantOid: toMerchantOid(order.id),
-    email: authUser.email ?? "siparis@adanacoloralbum.com",
+    email: authUser.email ?? `siparis@${new URL(COMPANY.siteUrl).hostname}`,
     amountTl: order.total,
     userIp,
     basket,

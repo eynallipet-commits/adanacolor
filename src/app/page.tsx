@@ -131,7 +131,7 @@ export default async function Home() {
         }
       : {}),
     telephone: COMPANY.phone || undefined,
-    url: "https://adanacoloralbum.com",
+    url: COMPANY.siteUrl,
   };
 
   return (

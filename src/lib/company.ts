@@ -9,6 +9,12 @@ interface CompanyInfo {
   legalName: string;
   brandName: string;
   tagline: string;
+  /**
+   * Sitenin canlı adresi (protokol dahil, sonunda / olmadan). SEO meta etiketleri,
+   * sitemap.xml, robots.txt ve PayTR bildirim URL'i buradan türetilir — domain
+   * değişirse yalnızca burayı güncellemek yeterli.
+   */
+  siteUrl: string;
   addressLine: string;
   district: string;
   city: string;
@@ -30,6 +36,7 @@ export const COMPANY: CompanyInfo = {
   legalName: "Adana Color Foto Albüm San. Tic. Ltd. Şti.",
   brandName: "Adana Color Albüm",
   tagline: "Fotoğrafçılar için albüm, canvas ve baskı üretimi",
+  siteUrl: "https://adanacoloralbums.com",
 
   /** Açık adres (mahalle/cadde/no). Boşsa footer'da yalnızca şehir görünür. */
   addressLine: "A, Yeşiloba Mahallesi, 46069. Sokak No:10, 01210 Seyhan/Adana",

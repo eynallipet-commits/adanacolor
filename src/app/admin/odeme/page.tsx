@@ -3,6 +3,7 @@ import { Landmark, CreditCard } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getAppSettings } from "@/lib/settings";
+import { COMPANY } from "@/lib/company";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BankTransferForm } from "./bank-transfer-form";
 import { PaytrSettingsForm } from "./paytr-settings-form";
@@ -18,7 +19,7 @@ export default async function OdemePage() {
     headers(),
   ]);
 
-  const host = h.get("host") ?? "adanacoloralbum.com";
+  const host = h.get("host") ?? new URL(COMPANY.siteUrl).host;
   const proto = h.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");
   const notifyUrl = `${proto}://${host}/api/paytr/webhook`;
 

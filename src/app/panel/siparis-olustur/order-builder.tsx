@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import Image from "next/image";
 import { CreditCard, Landmark, Check, ImageOff, ShoppingCart, Images, Lock, RotateCcw, Maximize2 } from "lucide-react";
 import { createOrderAction, type CreateOrderState } from "./actions";
-import { calcAlbumUnitPrice, calcOrderTotals } from "@/lib/pricing";
+import { calcAlbumUnitPrice, calcOrderTotals, describeExtraPages } from "@/lib/pricing";
 import { formatTL, cn } from "@/lib/utils";
 import { EXTRA_CATEGORY_LABELS } from "@/lib/order-status";
 import { getRequiredPhotoCount, ORDER_PHOTOS_BUCKET } from "@/lib/storage";
@@ -25,6 +25,7 @@ import type {
   AlbumSizePrice,
   ExtraCategory,
   ExtraProduct,
+  PackagePagePrice,
   PackageType,
 } from "@/lib/database.types";
 
@@ -91,6 +92,7 @@ export function OrderBuilder({
   initialCart = [],
   bankTransferInfo,
   paytrEnabled,
+  pageTiers,
 }: {
   sizes: AlbumSize[];
   packages: PackageType[];
@@ -105,7 +107,19 @@ export function OrderBuilder({
   initialCart?: InitialCartLine[];
   bankTransferInfo: { bankName: string; accountName: string; iban: string };
   paytrEnabled: boolean;
+  pageTiers: PackagePagePrice[];
 }) {
+  /** Kampanya kademeleri paket bazında gruplanır; fiyat gösterimi bunlara göre yapılır. */
+  const tiersByPackage = useMemo(() => {
+    const map = new Map<string, PackagePagePrice[]>();
+    for (const t of pageTiers) {
+      const list = map.get(t.package_type_id) ?? [];
+      list.push(t);
+      map.set(t.package_type_id, list);
+    }
+    for (const list of map.values()) list.sort((a, b) => a.min_pages - b.min_pages);
+    return map;
+  }, [pageTiers]);
   const colorMap = useMemo(() => new Map(colors.map((c) => [c.id, c])), [colors]);
   const sizeCodeMap = useMemo(() => new Map(sizes.map((s) => [s.id, s.code])), [sizes]);
   /** Model kartının altında gösterilen desteklenen ebat listesi. */
@@ -147,7 +161,7 @@ export function OrderBuilder({
             coverDateText: line.coverDateText,
             albumColorId: color?.id ?? null,
             albumColorLabel: color ? colorLabel(color) : null,
-            unitPrice: calcAlbumUnitPrice(basePrice, pkg, line.pageCount),
+            unitPrice: calcAlbumUnitPrice(basePrice, pkg, line.pageCount, tiersByPackage.get(pkg.id) ?? []),
             label: `${size?.code ?? ""} · ${pkg.name} · ${line.pageCount} sayfa${model ? " · " + model.name : ""}${
               color ? " · Renk " + colorLabel(color) : ""
             }`,
@@ -253,10 +267,15 @@ export function OrderBuilder({
   }
 
   const currentBasePrice = priceMap.get(`${sizeId}:${packageTypeId}`);
+  const selectedPackageTiers = selectedPackage ? (tiersByPackage.get(selectedPackage.id) ?? []) : [];
   const currentUnitPrice =
     currentBasePrice !== undefined && selectedPackage
-      ? calcAlbumUnitPrice(currentBasePrice, selectedPackage, pageCount)
+      ? calcAlbumUnitPrice(currentBasePrice, selectedPackage, pageCount, selectedPackageTiers)
       : 0;
+  /** Sayfa sayısı değiştikçe ek sayfa maliyetini kullanıcıya canlı göstermek için. */
+  const pageExtra = selectedPackage
+    ? describeExtraPages(selectedPackage, selectedPackageTiers, pageCount)
+    : { extraPages: 0, perPage: 0, total: 0, isCampaign: false, savings: 0 };
 
   const needsColor = availableColors.length > 0;
   const canAddAlbum = !!selectedPackage && currentBasePrice !== undefined && (!needsColor || !!albumColorId);
@@ -424,9 +443,59 @@ export function OrderBuilder({
                   onChange={(e) => setPageCount(Number(e.target.value))}
                 />
                 {selectedPackage && (
-                  <p className="mt-1 text-xs text-neutral-500">
-                    Taban {selectedPackage.base_page_count} sayfa, ek sayfa {formatTL(selectedPackage.extra_page_price)}
-                  </p>
+                  <div className="mt-1 space-y-1">
+                    <p className="text-xs text-neutral-500">
+                      Taban {selectedPackage.base_page_count} sayfa dahil
+                      {pageExtra.extraPages === 0 && " — ek ücret yok"}
+                    </p>
+                    {pageExtra.extraPages > 0 && (
+                      <p
+                        className={cn(
+                          "text-xs font-medium",
+                          pageExtra.isCampaign ? "text-emerald-700" : "text-neutral-700"
+                        )}
+                      >
+                        +{pageExtra.extraPages} ek sayfa × {formatTL(pageExtra.perPage)} ={" "}
+                        {formatTL(pageExtra.total)}
+                        {pageExtra.isCampaign && pageExtra.savings > 0 && (
+                          <span className="ml-1 font-normal">
+                            (kampanya · {formatTL(pageExtra.savings)} avantaj)
+                          </span>
+                        )}
+                      </p>
+                    )}
+                    {selectedPackageTiers.length > 0 && (
+                      <div className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1.5">
+                        <p className="text-[11px] font-medium text-emerald-800">
+                          Sayfa kampanyaları — daha çok sayfa, daha uygun sayfa fiyatı:
+                        </p>
+                        <ul className="mt-0.5 space-y-0.5">
+                          {selectedPackageTiers.map((t, i) => {
+                            const active =
+                              pageCount >= t.min_pages &&
+                              (t.max_pages === null || pageCount <= t.max_pages);
+                            return (
+                              <li
+                                key={i}
+                                className={cn(
+                                  "text-[11px]",
+                                  active ? "font-semibold text-emerald-900" : "text-emerald-700"
+                                )}
+                              >
+                                {t.max_pages === null
+                                  ? `${t.min_pages}+ sayfa`
+                                  : t.min_pages === t.max_pages
+                                    ? `${t.min_pages} sayfa`
+                                    : `${t.min_pages}–${t.max_pages} sayfa`}
+                                : sayfa başı {formatTL(t.extra_page_price)}
+                                {active && " ← şu an geçerli"}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
               <div>

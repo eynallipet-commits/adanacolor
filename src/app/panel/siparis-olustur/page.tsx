@@ -9,6 +9,7 @@ import type {
   AlbumSizePrice,
   ExtraProduct,
   OrderItem,
+  PackagePagePrice,
   PackageType,
 } from "@/lib/database.types";
 import { getAppSettings } from "@/lib/settings";
@@ -31,7 +32,17 @@ export default async function SiparisOlusturPage({
   const { tekrar } = await searchParams;
   const supabase = await createClient();
 
-  const [sizesRes, packagesRes, pricesRes, modelsRes, extrasRes, colorsRes, modelSizesRes, modelColorsRes] =
+  const [
+    sizesRes,
+    packagesRes,
+    pricesRes,
+    modelsRes,
+    extrasRes,
+    colorsRes,
+    modelSizesRes,
+    modelColorsRes,
+    pageTiersRes,
+  ] =
     await Promise.all([
       supabase.from("album_sizes").select("*").order("sort_order").returns<AlbumSize[]>(),
       supabase.from("package_types").select("*").order("sort_order").returns<PackageType[]>(),
@@ -46,6 +57,11 @@ export default async function SiparisOlusturPage({
       supabase.from("album_colors").select("*").eq("active", true).order("sort_order").returns<AlbumColor[]>(),
       supabase.from("album_model_sizes").select("*").returns<AlbumModelSize[]>(),
       supabase.from("album_model_colors").select("*").returns<AlbumModelColor[]>(),
+      supabase
+        .from("package_page_prices")
+        .select("*")
+        .order("min_pages")
+        .returns<PackagePagePrice[]>(),
     ]);
 
   const [appSettings, paytrSettings] = await Promise.all([getAppSettings(), getPaytrSettings()]);
@@ -113,6 +129,7 @@ export default async function SiparisOlusturPage({
         initialCart={initialCart}
         bankTransferInfo={bankTransferInfo}
         paytrEnabled={!!paytrSettings}
+        pageTiers={pageTiersRes.data ?? []}
       />
     </div>
   );

@@ -96,6 +96,17 @@ export interface PackageType {
   sort_order: number;
 }
 
+/** Sayfa sayısına/aralığına özel kampanya fiyatı (bkz. migration 0020). */
+export interface PackagePagePrice {
+  id: string;
+  package_type_id: string;
+  /** Toplam sayfa sayısı aralığı, her ikisi de dahil. max_pages null = "ve üzeri". */
+  min_pages: number;
+  max_pages: number | null;
+  extra_page_price: number;
+  created_at: string;
+}
+
 export interface AlbumSizePrice {
   id: string;
   size_id: string;
