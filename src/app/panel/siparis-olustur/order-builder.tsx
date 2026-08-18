@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import Image from "next/image";
 import { CreditCard, Landmark, Check, ImageOff, ShoppingCart, Images, Lock, RotateCcw, Maximize2 } from "lucide-react";
 import { createOrderAction, type CreateOrderState } from "./actions";
-import { calcAlbumUnitPrice, calcOrderTotals, describeExtraPages } from "@/lib/pricing";
+import { PricingEngine, calcOrderTotals } from "@/lib/pricing";
 import { formatTL, cn } from "@/lib/utils";
 import { EXTRA_CATEGORY_LABELS } from "@/lib/order-status";
 import { getRequiredPhotoCount, ORDER_PHOTOS_BUCKET } from "@/lib/storage";
@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { OrderPhotos } from "@/components/order-photos";
+import { PageCountPicker, type PageCountOption } from "./page-count-picker";
 import { ColorSwatch, colorLabel } from "@/components/color-swatch";
 import { ImagePreviewModal } from "@/components/image-preview-modal";
 import type {
@@ -76,6 +77,10 @@ export interface InitialExtraCartLine {
 }
 export type InitialCartLine = InitialAlbumCartLine | InitialExtraCartLine;
 
+/** Sayfa seçicisinin kapsadığı aralık — paketin tabanı daha büyükse başlangıç ona çekilir. */
+const PAGE_PICKER_MIN = 5;
+const PAGE_PICKER_MAX = 25;
+
 const initialState: CreateOrderState = {};
 
 export function OrderBuilder({
@@ -109,17 +114,14 @@ export function OrderBuilder({
   paytrEnabled: boolean;
   pageTiers: PackagePagePrice[];
 }) {
-  /** Kampanya kademeleri paket bazında gruplanır; fiyat gösterimi bunlara göre yapılır. */
-  const tiersByPackage = useMemo(() => {
-    const map = new Map<string, PackagePagePrice[]>();
-    for (const t of pageTiers) {
-      const list = map.get(t.package_type_id) ?? [];
-      list.push(t);
-      map.set(t.package_type_id, list);
-    }
-    for (const list of map.values()) list.sort((a, b) => a.min_pages - b.min_pages);
-    return map;
-  }, [pageTiers]);
+  /**
+   * Fiyat motoru: sabit ek sayfa ücreti, sayfa kampanyaları ve kampanyalar arası
+   * ek sayfa köprüsü tek yerden çözülür. Sunucu tarafı da aynı motoru kullanır.
+   */
+  const pricing = useMemo(
+    () => new PricingEngine({ packages, prices, tiers: pageTiers }),
+    [packages, prices, pageTiers]
+  );
   const colorMap = useMemo(() => new Map(colors.map((c) => [c.id, c])), [colors]);
   const sizeCodeMap = useMemo(() => new Map(sizes.map((s) => [s.id, s.code])), [sizes]);
   /** Model kartının altında gösterilen desteklenen ebat listesi. */
@@ -130,11 +132,6 @@ export function OrderBuilder({
       .map((id) => sizeCodeMap.get(id))
       .filter(Boolean)
       .join(", ");
-  };
-  /** Model seçili değilse ya da ebat tanımı yoksa tüm ebatlar açık kabul edilir. */
-  const sizeIdsForModel = (modelId: string) => {
-    const ids = modelId ? modelSizes[modelId] : undefined;
-    return ids && ids.length > 0 ? ids : null;
   };
   const supabase = useMemo(() => createClient(), []);
   const priceMap = useMemo(() => new Map(prices.map((p) => [`${p.size_id}:${p.package_type_id}`, p.price])), [prices]);
@@ -161,7 +158,7 @@ export function OrderBuilder({
             coverDateText: line.coverDateText,
             albumColorId: color?.id ?? null,
             albumColorLabel: color ? colorLabel(color) : null,
-            unitPrice: calcAlbumUnitPrice(basePrice, pkg, line.pageCount, tiersByPackage.get(pkg.id) ?? []),
+            unitPrice: pricing.unitPrice(line.sizeId, line.packageTypeId, line.pageCount) ?? basePrice,
             label: `${size?.code ?? ""} · ${pkg.name} · ${line.pageCount} sayfa${model ? " · " + model.name : ""}${
               color ? " · Renk " + colorLabel(color) : ""
             }`,
@@ -197,19 +194,28 @@ export function OrderBuilder({
   // Albüm ekleme formu state'i
   // Başlangıç ebadı, varsayılan modelin basabildiği ebatlardan seçilmeli —
   // aksi halde <select> ilk seçeneği gösterirken state başka bir ebatta kalır.
-  const defaultModelId = models[0]?.id ?? "";
+  // Akış ebattan modele doğrudur: önce ebat seçilir, kapak modelleri o ebada göre süzülür.
+  // (Eskiden ters çalışıyordu ve modele tıklamak seçili ebadı değiştirebiliyordu.)
+  const modelsFitSize = (modelId: string, targetSizeId: string) => {
+    const ids = modelSizes[modelId];
+    return !ids || ids.length === 0 || ids.includes(targetSizeId);
+  };
+  // Açılışta hiçbir kapak modelinin basamadığı bir ebatta kalmayalım — kullanıcı boş bir
+  // model listesiyle karşılaşıyordu (ör. katalogda 21x54'ü destekleyen model yok).
   const [sizeId, setSizeId] = useState(() => {
-    const ids = sizeIdsForModel(defaultModelId);
-    const usable = ids ? sizes.filter((s) => ids.includes(s.id)) : sizes;
-    return usable[0]?.id ?? sizes[0]?.id ?? "";
+    const usable = sizes.find((s) => models.some((m) => modelsFitSize(m.id, s.id)));
+    return (usable ?? sizes[0])?.id ?? "";
   });
+  const defaultModelId = models.find((m) => modelsFitSize(m.id, sizeId))?.id ?? "";
   const availablePackages = useMemo(
     () => packages.filter((pkg) => priceMap.has(`${sizeId}:${pkg.id}`)),
     [packages, priceMap, sizeId]
   );
   const [packageTypeId, setPackageTypeId] = useState(availablePackages[0]?.id ?? "");
   const selectedPackage = packages.find((p) => p.id === packageTypeId) ?? availablePackages[0];
-  const [pageCount, setPageCount] = useState(selectedPackage?.base_page_count ?? 0);
+  const [pageCount, setPageCount] = useState(() =>
+    Math.max(PAGE_PICKER_MIN, selectedPackage?.base_page_count ?? 0)
+  );
   const [albumModelId, setAlbumModelId] = useState<string>(defaultModelId);
   const [albumColorId, setAlbumColorId] = useState<string>("");
   const [previewModel, setPreviewModel] = useState<AlbumModel | null>(null);
@@ -219,14 +225,18 @@ export function OrderBuilder({
   const [coverNamesText, setCoverNamesText] = useState("");
   const [coverDateText, setCoverDateText] = useState("");
 
-  // Seçili modelin basılabildiği ebatlar
-  const allowedSizes = useMemo(() => {
-    const ids = sizeIdsForModel(albumModelId);
-    if (!ids) return sizes;
-    const set = new Set(ids);
-    return sizes.filter((s) => set.has(s.id));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sizeIdsForModel modelSizes'a bağlı, stabil
-  }, [albumModelId, modelSizes, sizes]);
+  /**
+   * Seçili ebatta basılabilen kapak modelleri. Ebat kısıtı tanımlanmamış modeller
+   * (hiç satırı olmayanlar) her ebatta basılabilir kabul edilir.
+   */
+  const availableModels = useMemo(() => {
+    if (!sizeId) return models;
+    return models.filter((m) => {
+      const ids = modelSizes[m.id];
+      return !ids || ids.length === 0 || ids.includes(sizeId);
+    });
+  }, [models, modelSizes, sizeId]);
+
 
   // Seçili modelin sunduğu renkler
   const availableColors = useMemo(() => {
@@ -236,26 +246,30 @@ export function OrderBuilder({
     return colors.filter((c) => set.has(c.id));
   }, [albumModelId, modelColors, colors]);
 
-  // Ebat değişince paket seçimini geçerli aralığa taşı
+  // Ebat değişince paketi geçerli aralığa taşı ve modeli bu ebatta basılabilenlerden seç.
   function handleSizeChange(newSizeId: string) {
     setSizeId(newSizeId);
     const firstValid = packages.find((pkg) => priceMap.has(`${newSizeId}:${pkg.id}`));
     if (firstValid) {
       setPackageTypeId(firstValid.id);
-      setPageCount(firstValid.base_page_count);
+      setPageCount(Math.max(PAGE_PICKER_MIN, firstValid.base_page_count));
+    }
+
+    // Seçili model yeni ebatta basılamıyorsa basılabilen ilk modele geç.
+    if (albumModelId && !modelsFitSize(albumModelId, newSizeId)) {
+      const next = models.find((m) => modelsFitSize(m.id, newSizeId));
+      setAlbumModelId(next?.id ?? "");
+      const colorIds = next ? modelColors[next.id] : undefined;
+      if (!colorIds || !colorIds.includes(albumColorId)) setAlbumColorId("");
     }
   }
 
-  // Model değişince ebat ve rengi o modelin desteklediklerine sabitle
+  /**
+   * Model değişince YALNIZCA rengi tazeler. Ebada kesinlikle dokunmaz — kullanıcı ebadı
+   * seçtikten sonra modele tıklayınca ebadın altından kaymasına yol açıyordu.
+   */
   function handleModelChange(newModelId: string) {
     setAlbumModelId(newModelId);
-
-    const ids = sizeIdsForModel(newModelId);
-    if (ids && !ids.includes(sizeId)) {
-      const firstAllowed = sizes.find((s) => ids.includes(s.id));
-      if (firstAllowed) handleSizeChange(firstAllowed.id);
-    }
-
     const colorIds = newModelId ? modelColors[newModelId] : undefined;
     if (!colorIds || !colorIds.includes(albumColorId)) setAlbumColorId("");
   }
@@ -263,19 +277,40 @@ export function OrderBuilder({
   function handlePackageChange(newPackageId: string) {
     setPackageTypeId(newPackageId);
     const pkg = packages.find((p) => p.id === newPackageId);
-    if (pkg) setPageCount(pkg.base_page_count);
+    if (pkg) setPageCount(Math.max(PAGE_PICKER_MIN, pkg.base_page_count));
   }
 
   const currentBasePrice = priceMap.get(`${sizeId}:${packageTypeId}`);
-  const selectedPackageTiers = selectedPackage ? (tiersByPackage.get(selectedPackage.id) ?? []) : [];
+  const selectedPackageTiers = selectedPackage ? pricing.tiersFor(selectedPackage.id) : [];
   const currentUnitPrice =
     currentBasePrice !== undefined && selectedPackage
-      ? calcAlbumUnitPrice(currentBasePrice, selectedPackage, pageCount, selectedPackageTiers)
+      ? (pricing.unitPrice(sizeId, packageTypeId, pageCount) ?? currentBasePrice)
       : 0;
-  /** Sayfa sayısı değiştikçe ek sayfa maliyetini kullanıcıya canlı göstermek için. */
+  /**
+   * Sayfa sayısı değiştikçe ek sayfa maliyetinin dökümü. Köprülü kampanyalarda birden
+   * fazla dilim çıkabilir (ör. 6–10. sayfa ₺80, 11. sayfadan sonrası ₺200).
+   */
   const pageExtra = selectedPackage
-    ? describeExtraPages(selectedPackage, selectedPackageTiers, pageCount)
-    : { extraPages: 0, perPage: 0, total: 0, isCampaign: false, savings: 0 };
+    ? pricing.breakdown(sizeId, packageTypeId, pageCount)
+    : { extraPages: 0, total: 0, segments: [], hasBridge: false };
+  /** Köprü kuruluysa üst kampanyaya kadar geçerli sayfa ücreti (bilgi kutusu için). */
+  const activeBridge = selectedPackage ? pricing.bridgeFor(sizeId, packageTypeId) : null;
+
+  /**
+   * Sayfa seçeneklerinin listesi: paketin taban sayfasından (en az 5) 25 sayfaya kadar,
+   * her satırda o sayfa sayısındaki ek ücret ve toplam albüm fiyatı.
+   */
+  const pageOptions = useMemo<PageCountOption[]>(() => {
+    if (!selectedPackage || currentBasePrice === undefined) return [];
+    const start = Math.max(PAGE_PICKER_MIN, selectedPackage.base_page_count);
+    const opts: PageCountOption[] = [];
+    for (let pages = start; pages <= PAGE_PICKER_MAX; pages++) {
+      const unitPrice = pricing.unitPrice(sizeId, packageTypeId, pages);
+      if (unitPrice === undefined) continue;
+      opts.push({ pages, unitPrice, extraTotal: Math.round((unitPrice - currentBasePrice) * 100) / 100 });
+    }
+    return opts;
+  }, [selectedPackage, currentBasePrice, pricing, sizeId, packageTypeId]);
 
   const needsColor = availableColors.length > 0;
   const canAddAlbum = !!selectedPackage && currentBasePrice !== undefined && (!needsColor || !!albumColorId);
@@ -412,17 +447,15 @@ export function OrderBuilder({
               <div>
                 <Label>Ebat</Label>
                 <Select value={sizeId} onChange={(e) => handleSizeChange(e.target.value)}>
-                  {allowedSizes.map((s) => (
+                  {sizes.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.code}
                     </option>
                   ))}
                 </Select>
-                {allowedSizes.length < sizes.length && (
-                  <p className="mt-1 text-xs text-neutral-500">
-                    Yalnızca seçili modelin basılabildiği ebatlar listelenir.
-                  </p>
-                )}
+                <p className="mt-1 text-xs text-neutral-500">
+                  Önce ebadı seçin; kapak modelleri bu ebada göre listelenir.
+                </p>
               </div>
               <div>
                 <Label>Paket</Label>
@@ -436,11 +469,11 @@ export function OrderBuilder({
               </div>
               <div>
                 <Label>Sayfa Sayısı</Label>
-                <Input
-                  type="number"
-                  min={selectedPackage?.base_page_count ?? 0}
+                <PageCountPicker
                   value={pageCount}
-                  onChange={(e) => setPageCount(Number(e.target.value))}
+                  options={pageOptions}
+                  onChange={setPageCount}
+                  disabled={pageOptions.length === 0}
                 />
                 {selectedPackage && (
                   <div className="mt-1 space-y-1">
@@ -449,22 +482,44 @@ export function OrderBuilder({
                       {pageExtra.extraPages === 0 && " — ek ücret yok"}
                     </p>
                     {pageExtra.extraPages > 0 && (
-                      <p
-                        className={cn(
-                          "text-xs font-medium",
-                          pageExtra.isCampaign ? "text-emerald-700" : "text-neutral-700"
+                      <div className="space-y-0.5">
+                        {pageExtra.segments.map((seg, i) => (
+                          <p
+                            key={i}
+                            className={cn(
+                              "text-xs",
+                              seg.source === "flat" ? "text-neutral-700" : "font-medium text-emerald-700"
+                            )}
+                          >
+                            {seg.pages === 1
+                              ? `${seg.fromPage}. sayfa`
+                              : `${seg.fromPage}–${seg.toPage}. sayfa`}{" "}
+                            ({seg.pages} sayfa) × {formatTL(seg.perPage)} = {formatTL(seg.total)}
+                            {seg.source === "bridge" && seg.note && (
+                              <span className="ml-1 font-normal">({seg.note} kademesine kadar)</span>
+                            )}
+                          </p>
+                        ))}
+                        {pageExtra.segments.length > 1 && (
+                          <p className="text-xs font-semibold text-neutral-800">
+                            Toplam +{pageExtra.extraPages} ek sayfa = {formatTL(pageExtra.total)}
+                          </p>
                         )}
-                      >
-                        +{pageExtra.extraPages} ek sayfa × {formatTL(pageExtra.perPage)} ={" "}
-                        {formatTL(pageExtra.total)}
-                        {pageExtra.isCampaign && pageExtra.savings > 0 && (
-                          <span className="ml-1 font-normal">
-                            (kampanya · {formatTL(pageExtra.savings)} avantaj)
-                          </span>
-                        )}
-                      </p>
+                      </div>
                     )}
-                    {selectedPackageTiers.length > 0 && (
+                    {activeBridge && (
+                      <div className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1.5">
+                        <p className="text-[11px] leading-relaxed text-emerald-800">
+                          Bu ebatta {selectedPackage.base_page_count + 1}. sayfadan{" "}
+                          {activeBridge.target.base_page_count}. sayfaya kadar sayfa başı{" "}
+                          <span className="font-semibold">{formatTL(activeBridge.perPage)}</span>.{" "}
+                          {activeBridge.target.base_page_count}. sayfada tam olarak &quot;
+                          {activeBridge.targetName}&quot; kampanyasının fiyatına ulaşırsınız; sonraki
+                          sayfalar o kampanyanın ek sayfa ücretinden hesaplanır.
+                        </p>
+                      </div>
+                    )}
+                    {!activeBridge && selectedPackageTiers.length > 0 && (
                       <div className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1.5">
                         <p className="text-[11px] font-medium text-emerald-800">
                           Sayfa kampanyaları — daha çok sayfa, daha uygun sayfa fiyatı:
@@ -508,9 +563,16 @@ export function OrderBuilder({
                 />
               </div>
               <div className="col-span-2">
-                <Label>Kapak Modeli</Label>
+                <Label>
+                  Kapak Modeli
+                  {availableModels.length < models.length && (
+                    <span className="ml-1.5 font-normal text-neutral-500">
+                      — {sizeCodeMap.get(sizeId)} ebadında basılabilen {availableModels.length} model
+                    </span>
+                  )}
+                </Label>
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {models.map((m) => {
+                  {availableModels.map((m) => {
                     const selected = albumModelId === m.id;
                     return (
                       <div
@@ -573,15 +635,19 @@ export function OrderBuilder({
                     );
                   })}
                 </div>
-                {models.length === 0 && (
-                  <p className="mt-1 text-xs text-neutral-500">Tanımlı kapak modeli yok.</p>
+                {availableModels.length === 0 && (
+                  <p className="mt-1 text-xs text-neutral-500">
+                    {models.length === 0
+                      ? "Tanımlı kapak modeli yok."
+                      : "Bu ebatta basılabilen kapak modeli yok — farklı bir ebat seçin."}
+                  </p>
                 )}
               </div>
 
               {needsColor && (
                 <div className="col-span-2">
                   <Label>
-                    Kapak Rengi <span className="text-red-600">*</span>
+                    Kumaş Rengi <span className="text-red-600">*</span>
                   </Label>
                   <div className="flex flex-wrap gap-2.5">
                     {availableColors.map((c) => {
@@ -631,12 +697,12 @@ export function OrderBuilder({
                     })}
                   </div>
                   {!albumColorId && (
-                    <p className="mt-1 text-xs text-amber-700">Sepete eklemek için bir kapak rengi seçin.</p>
+                    <p className="mt-1 text-xs text-amber-700">Sepete eklemek için bir kumaş rengi seçin.</p>
                   )}
                 </div>
               )}
               <div>
-                <Label>Kapak Yazısı (isimler)</Label>
+                <Label>Gelin Damat İsmi</Label>
                 <Input
                   placeholder="Örn: Ayşe & Mehmet"
                   value={coverNamesText}
@@ -644,7 +710,7 @@ export function OrderBuilder({
                 />
               </div>
               <div>
-                <Label>Kapak Tarihi</Label>
+                <Label>Düğün Tarihi</Label>
                 <Input
                   placeholder="Örn: 12.06.2026"
                   value={coverDateText}
@@ -828,7 +894,13 @@ export function OrderBuilder({
                         </button>
                       </div>
                       <div className="mt-2.5 border-t border-neutral-100 pt-2.5">
-                        <OrderPhotos companyId={companyId} itemId={l.id} requiredCount={requiredCount} canManage />
+                        <OrderPhotos
+                          companyId={companyId}
+                          itemId={l.id}
+                          itemType={l.type}
+                          requiredCount={requiredCount}
+                          canManage
+                        />
                       </div>
                     </li>
                   );
@@ -1032,7 +1104,7 @@ export function OrderBuilder({
       {previewColor?.image_url && (
         <ImagePreviewModal
           imageUrl={previewColor.image_url}
-          alt={`${colorLabel(previewColor)} kapak rengi`}
+          alt={`${colorLabel(previewColor)} kumaş rengi`}
           title={colorLabel(previewColor)}
           subtitle="Kumaş/deri kartelası"
           actionLabel="Bu Rengi Seç"

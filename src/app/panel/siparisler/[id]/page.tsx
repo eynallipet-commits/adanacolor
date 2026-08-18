@@ -163,8 +163,10 @@ export default async function SiparisDetayPage({ params }: { params: Promise<{ i
                 <OrderPhotos
                   companyId={order.company_id}
                   itemId={item.id}
+                  itemType={item.item_type}
                   requiredCount={getRequiredPhotoCount(item)}
                   canManage={canManage}
+                  zipBaseName={order.order_no ?? undefined}
                 />
                 {canRequestPhotoChange(order.status) && (
                   <div className="mt-3">

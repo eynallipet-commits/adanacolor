@@ -94,6 +94,12 @@ export interface PackageType {
   base_page_count: number;
   extra_page_price: number;
   sort_order: number;
+  /**
+   * Ek sayfa fiyatının türetileceği üst kampanya (bkz. migration 0021). Doluysa, taban
+   * sayfayı aşan sayfalar sabit ücret yerine iki kampanyanın o EBATTAKİ fiyat farkından
+   * hesaplanır; üst kampanyanın taban sayfası aşıldığında hesap o kampanyayla devam eder.
+   */
+  bridge_package_type_id: string | null;
 }
 
 /** Sayfa sayısına/aralığına özel kampanya fiyatı (bkz. migration 0020). */

@@ -5,6 +5,7 @@ import { FileCheck2, Loader2, UploadCloud } from "lucide-react";
 import { applyAction, type ApplyState } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -113,10 +114,9 @@ export function ApplyForm() {
         </div>
         <div>
           <Label htmlFor="password">Şifre *</Label>
-          <Input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             required
             minLength={6}
             placeholder="••••••••"
@@ -126,10 +126,9 @@ export function ApplyForm() {
         </div>
         <div>
           <Label htmlFor="confirm_password">Şifre (Tekrar) *</Label>
-          <Input
+          <PasswordInput
             id="confirm_password"
             name="confirm_password"
-            type="password"
             required
             minLength={6}
             placeholder="••••••••"

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { OrderPhotos } from "@/components/order-photos";
+import { OrderPhotosDownload } from "@/components/order-photos-download";
 import { ColorSwatch } from "@/components/color-swatch";
 import { OrderStatusStepper } from "@/components/order-status-stepper";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +91,23 @@ export default async function AdminSiparisDetayPage({ params }: { params: Promis
           <DeleteOrderPhotosButton orderId={order.id} />
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+            <OrderPhotosDownload
+              companyId={order.company_id}
+              orderNo={order.order_no ?? order.id}
+              items={items.map((item) => ({
+                id: item.id,
+                itemType: item.item_type,
+                label:
+                  (item.item_type === "album" ? item.sizeLabel : item.extraLabel) ??
+                  item.item_type,
+              }))}
+            />
+            <p className="mt-2 text-[11px] text-neutral-500">
+              Tüm kalemlerin kapak ve iç sayfa fotoğrafları, sipariş numarasıyla adlandırılmış tek
+              bir klasör içinde iner. Tek tek indirmeye gerek yok.
+            </p>
+          </div>
           {items.map((item) => {
             const pendingRequest = pendingRequestByItem.get(item.id) ?? null;
             return (
@@ -115,8 +133,10 @@ export default async function AdminSiparisDetayPage({ params }: { params: Promis
                 <OrderPhotos
                   companyId={order.company_id}
                   itemId={item.id}
+                  itemType={item.item_type}
                   requiredCount={getRequiredPhotoCount(item)}
                   canManage={false}
+                  zipBaseName={order.order_no ?? undefined}
                 />
               </div>
             );

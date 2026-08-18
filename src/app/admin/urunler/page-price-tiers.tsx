@@ -15,9 +15,12 @@ import type { PackagePagePrice, PackageType } from "@/lib/database.types";
 export function PagePriceTiers({
   pkg,
   tiers,
+  bridgeTarget = null,
 }: {
   pkg: PackageType;
   tiers: PackagePagePrice[];
+  /** Köprü kuruluysa hedef kampanya — kademelerin nereden itibaren geçerli olduğunu anlatmak için. */
+  bridgeTarget?: PackageType | null;
 }) {
   const [minPages, setMinPages] = useState("");
   const [maxPages, setMaxPages] = useState("");
@@ -55,6 +58,15 @@ export function PagePriceTiers({
         <strong>tüm ek sayfalara</strong> uygulanır. Hiçbir aralık uymazsa paketin varsayılan ek
         sayfa ücreti ({formatTL(pkg.extra_page_price)}) geçerli olur.
       </p>
+      {bridgeTarget && (
+        <p className="mt-1.5 rounded border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-[11px] leading-relaxed text-emerald-800">
+          Bu kampanya &quot;{bridgeTarget.name}&quot; ile köprülü olduğu için{" "}
+          {pkg.base_page_count + 1}. – {bridgeTarget.base_page_count}. sayfalar buradaki kademelerden
+          değil, köprüden fiyatlanır. {bridgeTarget.base_page_count + 1}. sayfadan itibaren de{" "}
+          <strong>{bridgeTarget.name}</strong> kampanyasının kendi kademeleri geçerli olur — yani
+          aşağıdaki kademeler köprü kurulu kaldığı sürece devreye girmez.
+        </p>
+      )}
 
       {sorted.length > 0 && (
         <ul className="mt-2.5 space-y-1">

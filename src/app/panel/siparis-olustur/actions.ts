@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { requirePhotographer } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { calcAlbumUnitPrice, calcOrderTotals } from "@/lib/pricing";
+import { PricingEngine, calcOrderTotals } from "@/lib/pricing";
 import { mockCharge } from "@/lib/payments/mock";
 import { getPaytrSettings } from "@/lib/payments/paytr";
 import type {
@@ -87,13 +87,13 @@ export async function createOrderAction(
 
   const priceMap = new Map((prices ?? []).map((p) => [`${p.size_id}:${p.package_type_id}`, p.price]));
   const packageMap = new Map((packages ?? []).map((p) => [p.id, p]));
-  // Kampanya kademeleri de fiyat gibi sunucuda yeniden çözülür; istemciden gelen tutara güvenilmez.
-  const tiersByPackage = (pageTiers ?? []).reduce<Map<string, PackagePagePrice[]>>((acc, t) => {
-    const list = acc.get(t.package_type_id) ?? [];
-    list.push(t);
-    acc.set(t.package_type_id, list);
-    return acc;
-  }, new Map());
+  // Fiyat, kampanya kademeleri ve kampanyalar arası ek sayfa köprüsü sunucuda yeniden
+  // çözülür; istemciden gelen tutara asla güvenilmez.
+  const pricing = new PricingEngine({
+    packages: packages ?? [],
+    prices: priceMap,
+    tiers: pageTiers ?? [],
+  });
   const extraMap = new Map((extras ?? []).map((e) => [e.id, e]));
   const colorMap = new Map((colors ?? []).map((c) => [c.id, c]));
 
@@ -160,7 +160,10 @@ export async function createOrderAction(
 
       const quantity = Math.max(1, Math.floor(item.quantity));
       const pageCount = Math.max(pkg.base_page_count, Math.floor(item.pageCount));
-      const unitPrice = calcAlbumUnitPrice(basePrice, pkg, pageCount, tiersByPackage.get(pkg.id) ?? []);
+      const unitPrice = pricing.unitPrice(item.sizeId, item.packageTypeId, pageCount);
+      if (unitPrice === undefined) {
+        return { error: "Seçilen ebat/paket kombinasyonu geçersiz." };
+      }
       lines.push({
         id,
         item_type: "album",

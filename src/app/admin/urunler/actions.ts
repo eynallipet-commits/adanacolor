@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import type { PackageType } from "@/lib/database.types";
 
 export interface FormState {
   error?: string;
@@ -187,6 +188,42 @@ export async function deleteAlbumSizeAction(id: string): Promise<FormState> {
   return {};
 }
 
+/**
+ * Ek sayfa köprüsünü doğrular: hedef var olmalı, taban sayfası bu paketten büyük olmalı
+ * ve zincir kendine dönmemeli (A→B→A gibi döngüler fiyat hesabını kilitlerdi).
+ */
+async function validateBridge(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  selfId: string | null,
+  bridgeId: string | null,
+  basePageCount: number
+): Promise<string | null> {
+  if (!bridgeId) return null;
+  if (selfId && bridgeId === selfId) return "Bir kampanya kendisine köprülenemez.";
+
+  const { data } = await supabase
+    .from("package_types")
+    .select("id,name,base_page_count,bridge_package_type_id")
+    .returns<Pick<PackageType, "id" | "name" | "base_page_count" | "bridge_package_type_id">[]>();
+  const all = new Map((data ?? []).map((p) => [p.id, p]));
+
+  const target = all.get(bridgeId);
+  if (!target) return "Seçilen üst kampanya bulunamadı.";
+  if (target.base_page_count <= basePageCount) {
+    return `"${target.name}" kampanyasının taban sayfa sayısı bu kampanyadan büyük olmalı.`;
+  }
+
+  // Hedeften başlayarak zinciri yürü; kendimize dönüyorsak döngü var demektir.
+  const seen = new Set<string>(selfId ? [selfId] : []);
+  let cursor: string | null = bridgeId;
+  while (cursor) {
+    if (seen.has(cursor)) return "Kampanya köprüleri döngü oluşturuyor.";
+    seen.add(cursor);
+    cursor = all.get(cursor)?.bridge_package_type_id ?? null;
+  }
+  return null;
+}
+
 export async function addPackageTypeAction(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireAdmin();
   const supabase = await createClient();
@@ -194,6 +231,7 @@ export async function addPackageTypeAction(_prev: FormState, formData: FormData)
   const basePageCount = Number(formData.get("base_page_count") || 0);
   const extraPagePrice = Number(formData.get("extra_page_price") || 0);
   const sortOrder = Number(formData.get("sort_order") || 0);
+  const bridgeId = String(formData.get("bridge_package_type_id") || "").trim() || null;
   if (!name) return { error: "Paket/kampanya adı gerekli." };
   if (!Number.isFinite(basePageCount) || basePageCount < 0) {
     return { error: "Taban sayfa sayısı geçersiz." };
@@ -201,6 +239,8 @@ export async function addPackageTypeAction(_prev: FormState, formData: FormData)
   if (!Number.isFinite(extraPagePrice) || extraPagePrice < 0) {
     return { error: "Ek sayfa ücreti geçersiz." };
   }
+  const bridgeError = await validateBridge(supabase, null, bridgeId, Math.round(basePageCount));
+  if (bridgeError) return { error: bridgeError };
   const { error } = await supabase.from("package_types").insert({
     // Uygulama içinde hiçbir yerde gösterilmiyor/aranmıyor — yalnızca DB'nin
     // benzersizlik kısıtını karşılayan içsel bir anahtar.
@@ -209,6 +249,7 @@ export async function addPackageTypeAction(_prev: FormState, formData: FormData)
     base_page_count: Math.round(basePageCount),
     extra_page_price: Math.round(extraPagePrice * 100) / 100,
     sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
+    bridge_package_type_id: bridgeId,
   });
   if (error) return { error: error.message };
   revalidatePath("/admin/urunler");
@@ -218,7 +259,13 @@ export async function addPackageTypeAction(_prev: FormState, formData: FormData)
 
 export async function updatePackageTypeAction(
   id: string,
-  input: { name: string; basePageCount: number; extraPagePrice: number; sortOrder: number }
+  input: {
+    name: string;
+    basePageCount: number;
+    extraPagePrice: number;
+    sortOrder: number;
+    bridgePackageTypeId: string | null;
+  }
 ): Promise<FormState> {
   await requireAdmin();
   const supabase = await createClient();
@@ -230,6 +277,13 @@ export async function updatePackageTypeAction(
   if (!Number.isFinite(input.extraPagePrice) || input.extraPagePrice < 0) {
     return { error: "Ek sayfa ücreti geçersiz." };
   }
+  const bridgeError = await validateBridge(
+    supabase,
+    id,
+    input.bridgePackageTypeId,
+    Math.round(input.basePageCount)
+  );
+  if (bridgeError) return { error: bridgeError };
   const { error } = await supabase
     .from("package_types")
     .update({
@@ -237,6 +291,7 @@ export async function updatePackageTypeAction(
       base_page_count: Math.round(input.basePageCount),
       extra_page_price: Math.round(input.extraPagePrice * 100) / 100,
       sort_order: input.sortOrder,
+      bridge_package_type_id: input.bridgePackageTypeId,
     })
     .eq("id", id);
   if (error) return { error: error.message };

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 
 export function AccountSettingsForm({ currentEmail }: { currentEmail: string }) {
@@ -82,9 +83,8 @@ export function AccountSettingsForm({ currentEmail }: { currentEmail: string }) 
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <Label htmlFor="account-password">Yeni Şifre</Label>
-            <Input
+            <PasswordInput
               id="account-password"
-              type="password"
               minLength={6}
               placeholder="••••••••"
               value={password}
@@ -93,9 +93,8 @@ export function AccountSettingsForm({ currentEmail }: { currentEmail: string }) 
           </div>
           <div>
             <Label htmlFor="account-password-confirm">Yeni Şifre (Tekrar)</Label>
-            <Input
+            <PasswordInput
               id="account-password-confirm"
-              type="password"
               minLength={6}
               placeholder="••••••••"
               value={confirm}

@@ -1,10 +1,11 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { Megaphone } from "lucide-react";
+import { Link2, Megaphone } from "lucide-react";
 import { addPackageTypeAction, deletePackageTypeAction, updatePackageTypeAction, type FormState } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
@@ -13,20 +14,104 @@ import type { PackagePagePrice, PackageType } from "@/lib/database.types";
 
 const initial: FormState = {};
 
-function PackageRow({ pkg, tiers }: { pkg: PackageType; tiers: PackagePagePrice[] }) {
+/**
+ * "Ek sayfa köprüsü" seçici.
+ *
+ * Köprü kurulduğunda bu kampanyanın ek sayfa ücreti sabit olmaktan çıkar: her ebat için
+ * iki kampanyanın o ebattaki fiyat farkı, aradaki sayfa farkına bölünerek hesaplanır.
+ * Böylece müşteri sayfa ekleyerek üst kampanyanın fiyatına tam olarak ulaşır.
+ */
+function BridgePicker({
+  pkg,
+  packages,
+  value,
+  onChange,
+  basePageCount,
+}: {
+  pkg: PackageType;
+  packages: PackageType[];
+  value: string;
+  onChange: (v: string) => void;
+  basePageCount: number;
+}) {
+  // Yalnızca taban sayfası daha büyük olan kampanyalar hedef olabilir.
+  const candidates = packages.filter(
+    (p) => p.id !== pkg.id && p.base_page_count > (Number.isFinite(basePageCount) ? basePageCount : pkg.base_page_count)
+  );
+  const target = packages.find((p) => p.id === value) ?? null;
+  const gap = target ? target.base_page_count - basePageCount : 0;
+
+  return (
+    <div className="rounded-md border border-dashed border-emerald-300 bg-emerald-50/50 p-3">
+      <p className="flex items-center gap-1.5 text-xs font-medium text-neutral-800">
+        <Link2 className="h-3.5 w-3.5 text-emerald-700" />
+        Ek Sayfa Köprüsü (üst kampanya)
+      </p>
+      <p className="mt-0.5 text-[11px] leading-relaxed text-neutral-600">
+        Bu kampanyayı bir üst kademeye bağlarsanız ek sayfa ücreti <strong>her ebat için ayrı</strong>{" "}
+        hesaplanır: iki kampanyanın o ebattaki fiyat farkı, aradaki sayfa farkına bölünür. Müşteri
+        sayfa ekleyerek üst kampanyanın fiyatına tam olarak ulaşır. Üst kampanyanın taban sayfası
+        aşıldığında fiyatlama <strong>üst kampanyanın</strong> kendi ek sayfa ücretiyle devam eder.
+      </p>
+
+      {candidates.length === 0 ? (
+        <p className="mt-2 text-[11px] text-neutral-500">
+          Taban sayfa sayısı bundan büyük başka bir kampanya yok — önce üst kademeyi oluşturun.
+        </p>
+      ) : (
+        <>
+          <Select
+            className="mt-2 h-9"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            aria-label="Üst kampanya"
+          >
+            <option value="">Köprü yok — sabit ek sayfa ücreti kullanılsın</option>
+            {candidates.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} (taban {c.base_page_count} sayfa)
+              </option>
+            ))}
+          </Select>
+          {target && gap > 0 && (
+            <p className="mt-1.5 text-[11px] text-emerald-800">
+              {basePageCount + 1}. – {target.base_page_count}. sayfalar köprüden fiyatlanır: her ebat
+              için (<strong>{target.name}</strong> fiyatı − bu kampanyanın fiyatı) ÷ {gap}.{" "}
+              {target.base_page_count + 1}. sayfadan itibaren &quot;{target.name}&quot; kampanyasının ek
+              sayfa ücreti geçerlidir.
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function PackageRow({
+  pkg,
+  tiers,
+  packages,
+}: {
+  pkg: PackageType;
+  tiers: PackagePagePrice[];
+  packages: PackageType[];
+}) {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(pkg.name);
   const [basePageCount, setBasePageCount] = useState(pkg.base_page_count.toString());
   const [extraPagePrice, setExtraPagePrice] = useState(pkg.extra_page_price.toFixed(2));
   const [sortOrder, setSortOrder] = useState(pkg.sort_order);
+  const [bridgeId, setBridgeId] = useState(pkg.bridge_package_type_id ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const bridgeTarget = packages.find((p) => p.id === pkg.bridge_package_type_id) ?? null;
 
   function handleCancel() {
     setName(pkg.name);
     setBasePageCount(pkg.base_page_count.toString());
     setExtraPagePrice(pkg.extra_page_price.toFixed(2));
     setSortOrder(pkg.sort_order);
+    setBridgeId(pkg.bridge_package_type_id ?? "");
     setError(null);
     setIsEditing(false);
   }
@@ -58,6 +143,13 @@ function PackageRow({ pkg, tiers }: { pkg: PackageType; tiers: PackagePagePrice[
             />
           </div>
         </div>
+        <BridgePicker
+          pkg={pkg}
+          packages={packages}
+          value={bridgeId}
+          onChange={setBridgeId}
+          basePageCount={Number(basePageCount)}
+        />
         <div className="w-28">
           <Label htmlFor={`pkg-sort-${pkg.id}`}>Sıra</Label>
           <Input
@@ -79,6 +171,7 @@ function PackageRow({ pkg, tiers }: { pkg: PackageType; tiers: PackagePagePrice[
                   basePageCount: Number(basePageCount),
                   extraPagePrice: Number(extraPagePrice),
                   sortOrder,
+                  bridgePackageTypeId: bridgeId || null,
                 });
                 if (res.error) setError(res.error);
                 else setIsEditing(false);
@@ -94,7 +187,7 @@ function PackageRow({ pkg, tiers }: { pkg: PackageType; tiers: PackagePagePrice[
             <ConfirmDelete onConfirm={() => deletePackageTypeAction(pkg.id)} label="Sil" />
           </span>
         </div>
-        <PagePriceTiers pkg={pkg} tiers={tiers} />
+        <PagePriceTiers pkg={pkg} tiers={tiers} bridgeTarget={bridgeTarget} />
       </li>
     );
   }
@@ -113,6 +206,11 @@ function PackageRow({ pkg, tiers }: { pkg: PackageType; tiers: PackagePagePrice[
             Taban {pkg.base_page_count} sayfa · ek sayfa ₺{pkg.extra_page_price.toFixed(2)}
             {tiers.length > 0 && (
               <span className="ml-1 text-brand-700">· {tiers.length} sayfa kampanyası</span>
+            )}
+            {bridgeTarget && (
+              <span className="ml-1 text-emerald-700">
+                · ek sayfalar &quot;{bridgeTarget.name}&quot; ile köprülü
+              </span>
             )}
           </span>
         </span>
@@ -153,7 +251,7 @@ export function PackageManager({
 
       <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {packages.map((pkg) => (
-          <PackageRow key={pkg.id} pkg={pkg} tiers={tiersByPackage.get(pkg.id) ?? []} />
+          <PackageRow key={pkg.id} pkg={pkg} tiers={tiersByPackage.get(pkg.id) ?? []} packages={packages} />
         ))}
       </ul>
 
@@ -171,6 +269,21 @@ export function PackageManager({
             <Label htmlFor="new-pkg-extra">Ek Sayfa Ücreti</Label>
             <CurrencyInput id="new-pkg-extra" name="extra_page_price" defaultValue="0.00" required />
           </div>
+        </div>
+        <div>
+          <Label htmlFor="new-pkg-bridge">Ek Sayfa Köprüsü (opsiyonel)</Label>
+          <Select id="new-pkg-bridge" name="bridge_package_type_id" defaultValue="">
+            <option value="">Köprü yok — sabit ek sayfa ücreti</option>
+            {packages.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} (taban {p.base_page_count} sayfa)
+              </option>
+            ))}
+          </Select>
+          <p className="mt-1 text-[11px] text-neutral-500">
+            Seçerseniz ek sayfa ücreti sabit tutar yerine, iki kampanyanın her ebattaki fiyat
+            farkından türetilir. Hedefin taban sayfa sayısı bu paketten büyük olmalıdır.
+          </p>
         </div>
         <div className="w-28">
           <Label htmlFor="new-pkg-sort">Sıra</Label>

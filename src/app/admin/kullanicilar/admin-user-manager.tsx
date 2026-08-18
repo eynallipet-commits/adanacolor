@@ -5,6 +5,7 @@ import { addAdminUserAction, removeAdminUserAction, type FormState } from "./act
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { ConfirmDelete } from "@/components/ui/confirm-delete";
 import type { Profile } from "@/lib/database.types";
@@ -56,7 +57,7 @@ export function AdminUserManager({
         </div>
         <div>
           <Label htmlFor="admin-password">Şifre</Label>
-          <Input id="admin-password" name="password" type="password" minLength={6} required />
+          <PasswordInput id="admin-password" name="password" minLength={6} required />
         </div>
         <Button type="submit" size="sm" className="sm:col-span-3 sm:w-fit" disabled={isPending}>
           {isPending ? "Oluşturuluyor..." : "Yönetici Ekle"}

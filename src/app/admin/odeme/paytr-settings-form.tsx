@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { updatePaytrSettingsAction, type FormState } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import type { PaymentProviderSettings } from "@/lib/database.types";
 
@@ -34,20 +35,18 @@ export function PaytrSettingsForm({
         </div>
         <div>
           <Label htmlFor="paytr_merchant_key">Mağaza Anahtarı (merchant_key)</Label>
-          <Input
+          <PasswordInput
             id="paytr_merchant_key"
             name="paytr_merchant_key"
-            type="password"
             autoComplete="off"
             defaultValue={settings.paytr_merchant_key ?? ""}
           />
         </div>
         <div>
           <Label htmlFor="paytr_merchant_salt">Mağaza Gizli Anahtarı (merchant_salt)</Label>
-          <Input
+          <PasswordInput
             id="paytr_merchant_salt"
             name="paytr_merchant_salt"
-            type="password"
             autoComplete="off"
             defaultValue={settings.paytr_merchant_salt ?? ""}
           />

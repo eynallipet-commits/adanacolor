@@ -92,7 +92,12 @@ export default async function UrunlerPage() {
           <CardDescription>Hücreye tıklayıp fiyatı değiştirin, alandan çıkınca otomatik kaydedilir.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <PriceMatrix sizes={sizesRes.data ?? []} packages={packagesRes.data ?? []} prices={pricesRes.data ?? []} />
+          <PriceMatrix
+            sizes={sizesRes.data ?? []}
+            packages={packagesRes.data ?? []}
+            prices={pricesRes.data ?? []}
+            pageTiers={pageTiersRes.data ?? []}
+          />
           <SizeManager sizes={sizesRes.data ?? []} />
           <PackageManager packages={packagesRes.data ?? []} pageTiers={pageTiersRes.data ?? []} />
         </CardContent>

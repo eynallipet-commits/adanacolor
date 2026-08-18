@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { inviteUserAction } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 
 export function InviteUserForm({ companyId }: { companyId: string }) {
@@ -37,9 +38,8 @@ export function InviteUserForm({ companyId }: { companyId: string }) {
       </div>
       <div>
         <Label htmlFor="invite-password">Şifre</Label>
-        <Input
+        <PasswordInput
           id="invite-password"
-          type="password"
           minLength={6}
           placeholder="En az 6 karakter"
           value={password}
